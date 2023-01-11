@@ -3250,6 +3250,16 @@ function city_fields( kCityData, pCityInstance )
 	if HasCityDistrict(kCityData, "DISTRICT_GOVERNMENT") then
 		sStatusText = sStatusText.."[ICON_DISTRICT_GOVPLAZA]"; table.insert(tStatusToolTip, "[COLOR:111,15,143,255]"..Locale.Lookup("LOC_DISTRICT_GOVERNMENT_NAME")..ENDCOLOR); -- ICON_DISTRICT_GOVERNMENT
 	end
+    -- 2021-05-31 Diplomatic Quarter
+	if HasCityDistrict(kCityData, "DISTRICT_DIPLOMATIC_QUARTER") then
+		sStatusText = sStatusText.."[ICON_DISTRICT_DIPLOMATIC_QUARTER]"; table.insert(tStatusToolTip, "[COLOR:111,15,143,255]"..Locale.Lookup("LOC_DISTRICT_DIPLOMATIC_QUARTER_NAME")..ENDCOLOR); -- ICON_DISTRICT_DIPLOMATIC_QUARTER
+	end
+    -- 2021-05-31 Preserve
+	if HasCityDistrict(kCityData, "DISTRICT_PRESERVE") then
+		sStatusText = sStatusText.."[ICON_DISTRICT_PRESERVE]"; table.insert(tStatusToolTip, "[COLOR:15,140,15,255]"..Locale.Lookup("LOC_DISTRICT_PRESERVE_NAME")..ENDCOLOR); -- ICON_DISTRICT_PRESERVE
+	end
+    
+    
 	local bHasWonder:boolean = false;
 	for _,wonder in ipairs(kCityData.Wonders) do
 		bHasWonder = true;
