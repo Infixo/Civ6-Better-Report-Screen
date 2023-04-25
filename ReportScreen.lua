@@ -138,6 +138,10 @@ local m_kModifiersUnits	:table = nil; -- to show various abilities and effects
 m_kCurrentTab = 1;
 -- !!
 
+-- 230425 #7 cache for storing list of units for abilities
+g_AbilitiesUnits = {}; -- this is based on TypeTags table, so it is static
+
+
 -- ===========================================================================
 -- Time helpers and debug routines
 -- ===========================================================================
@@ -387,6 +391,25 @@ function GetRealHousingFromImprovements(pCity:table)
 	return pCity:GetGrowth():GetHousingFromImprovements() + Round(iNumHousing-math.floor(iNumHousing),1);
 end
 
+-- 230425 create cache that stores units assigned to abilities
+function InitializeAbilitiesUnits()
+	-- first pass - extract all abilities and assigned classes
+	for row in GameInfo.TypeTags() do
+		if string.sub(row.Type, 1, 8) == "ABILITY_" then
+			if g_AbilitiesUnits[row.Type] == nil then g_AbilitiesUnits[row.Type] = {}; end
+			g_AbilitiesUnits[row.Type][row.Tag] = true;
+		end
+	end
+	-- second pass - extract units
+	for row in GameInfo.TypeTags() do
+		if string.sub(row.Type, 1, 5) == "UNIT_" then
+			-- register the unit for all abilities that have its class
+			for _,units in pairs(g_AbilitiesUnits) do -- key is not important now
+				if units[row.Tag] then units[row.Type] = true; end
+			end
+		end
+	end
+end
 
 function GetData()
 	--print("FUN GetData() - start");
@@ -424,7 +447,7 @@ function GetData()
 	local pScience	:table	= player:GetTechs();
 	local pResources:table	= player:GetResources();		
 	local MaintenanceDiscountPerUnit:number = pTreasury:GetMaintDiscountPerUnit(); -- this will be used in 2 reports
-
+	local pUnits    :table  = player:GetUnits(); -- 230425 moved
 
 	-- ==========================
 	-- BRS !! this will use the m_kUnitDataReport to fill out player's unit info
@@ -607,7 +630,7 @@ function GetData()
 			--print("- Arguments:");
 			--for k,v in pairs(data.Arguments) do print(k,v); end -- debug
 		end
-
+		
 		local function RegisterModifierForUnit(iUnitID:number, sSubjectType:string, sSubjectName:string)
 			--print("registering for unit", iUnitID, data.ID, sSubjectType, sSubjectName);
 			-- fix for sudden changes in modifier system, like Veterancy changed in March 2018 patch
@@ -622,9 +645,23 @@ function GetData()
 				data.SubjectType = sSubjectType;
 				data.SubjectName = sSubjectName;
 			end
-			table.insert(m_kModifiersUnits[iUnitID], data);
+			-- 230425 #7 filter out the modifiers from abilities that do not match the unit's class
+			-- 
+			local isValid: boolean = false;
+			if data.Modifier.EffectType == "EFFECT_GRANT_ABILITY" then
+				local ability: string = data.Arguments.AbilityType;
+				local unit: table = pUnits:FindID(iUnitID);
+				if unit then
+					local unitType: string = GameInfo.Units[unit:GetUnitType()].UnitType;
+					if g_AbilitiesUnits[ability] and g_AbilitiesUnits[ability][unitType] then isValid = true; end
+				end
+			else
+				isValid = true; -- we don't check other effects, but could be extended later
+			end
+			if isValid then table.insert(m_kModifiersUnits[iUnitID], data); end
 			-- debug output
 			--print("--------- Tracking", iUnitID, data.ID, sOwnerType, sOwnerName, sSubjectName);
+			--print("- Valid?", isValid and "yes" or "NO");
 			--for k,v in pairs(data) do print(k,v); end
 			--print("- Modifier:", data.Definition.Id);
 			--print("- Collection:", data.Modifier.CollectionType);
@@ -918,7 +955,7 @@ function GetData()
 	-- Units (TODO: Group units by promotion class and determine total maintenance cost)
 	--print("FUN GetData() - units");
 	--local MaintenanceDiscountPerUnit:number = pTreasury:GetMaintDiscountPerUnit(); -- used also for Units tab, so defined earlier
-	local pUnits :table = player:GetUnits();
+	--local pUnits :table = player:GetUnits(); -- 230425 move up
 	for i, pUnit in pUnits:Members() do
 		local pUnitInfo:table = GameInfo.Units[pUnit:GetUnitType()];
 		-- get localized unit name with appropriate suffix
@@ -1454,7 +1491,7 @@ function GetWorkedTileYieldData( pCity:table, pCulture:table )
 				--end
                 -- 2021-05-14 Support for mods that add new yield types e.g. DE:E
                 for yield,idx in pairs(YieldTypes) do -- WARNING! In this context there are no extra yields from RMT - but this is ok, because they don't exist in the game anyway
-                    kYields["YIELD_"..yield] = kYields["YIELD_"..yield] + kPlot:GetYield(inx);
+                    kYields["YIELD_"..yield] = kYields["YIELD_"..yield] + kPlot:GetYield(idx);
 				end
 			end
 		end
@@ -5228,6 +5265,7 @@ end
 function Initialize()
 
 	InitializePolicyData();
+	InitializeAbilitiesUnits(); -- 230425 cache for abilities
 
 	-- UI Callbacks
 	ContextPtr:SetInitHandler( OnInit );
