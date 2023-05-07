@@ -1110,7 +1110,12 @@ function GetData()
 			
 			if pDeals ~= nil then
 				for i,pDeal in ipairs(pDeals) do
-					if pDeal:IsValid() then -- BRS
+				
+					--if pDeal:IsValid() then -- BRS
+					-- 230508 #8 I don't know why this check's been added - there is none in the vanilla game
+					-- I discovered that when a player has less money than is due from per turn deals then those gold deal items are considered
+					-- "invalid" thus making an entire deal "invalid"; with this check such deal is omitted and not shown.
+					
 					-- Add outgoing gold deals
 					local pOutgoingDeal :table	= pDeal:FindItemsByType(DealItemTypes.GOLD, DealItemSubTypes.NONE, playerID);
 					if pOutgoingDeal ~= nil then
@@ -1200,7 +1205,7 @@ function GetData()
 							end
 						end
 					end	
-					end	-- BRS end
+					--end	-- BRS end
 				end							
 			end
 
@@ -1214,7 +1219,9 @@ function GetData()
 			local suzerainID:number = pMinorPlayerInfluence:GetSuzerain();
 			if suzerainID == playerID then
 				for row in GameInfo.Resources() do
-					local resourceAmount:number =  pMinorPlayer:GetResources():GetExportedResourceAmount(row.Index);
+					-- 230508 #11 GetExportedResourceAmount usually returns 0 thus the resource is not registered as coming from city-state
+					-- It only later is recognized as generic "gameplay bonus" due to difference in total vs. registered so far
+					local resourceAmount:number = pMinorPlayer:GetResources():GetExportedResourceAmount(row.Index) + pMinorPlayer:GetResources():GetResourceAmount(row.Index);
 					if resourceAmount > 0 then
 						local pMinorPlayerConfig:table = PlayerConfigurations[pMinorPlayer:GetID()];
 						local entryString:string = Locale.Lookup("LOC_HUD_REPORTS_CITY_STATE") .. " (" .. Locale.Lookup(pMinorPlayerConfig:GetPlayerName()) .. ")";
