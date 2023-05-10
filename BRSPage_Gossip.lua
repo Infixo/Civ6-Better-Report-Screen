@@ -95,7 +95,8 @@ function ViewGossipPage()
 	uiAllFilter.Button:SetText(Locale.Lookup("LOC_HUD_REPORTS_PLAYER_FILTER_ALL"));
 	uiAllFilter.Button:SetVoid1(-1);
 	uiAllFilter.Button:SetSizeX(252);
-
+	
+	--Timer1Tick("ViewGossipPage: filters");
 
 	--Populate with all of our Gossip and build Player Filter
 	for targetID, kPlayer in pairs(Players) do
@@ -117,8 +118,8 @@ function ViewGossipPage()
 				local leaderName:string = PlayerConfigurations[targetID]:GetLeaderTypeName();
 				local iconName:string = "ICON_" .. leaderName;
 				--Build and update
-				local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilter.LeaderIcon);
-				filterLeaderIcon:UpdateIcon(iconName, targetID, true);
+				--local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilter.LeaderIcon);
+				--filterLeaderIcon:UpdateIcon(iconName, targetID, true);
 				uiFilter.Button:SetText(Locale.Lookup(PlayerConfigurations[targetID]:GetLeaderName()));
 				uiFilter.Button:SetVoid1(targetID);
 				uiFilter.Button:SetSizeX(252);
@@ -137,13 +138,15 @@ function ViewGossipPage()
 			local leaderName:string = PlayerConfigurations[i]:GetLeaderTypeName();
 			local iconName:string = "ICON_" .. leaderName;
 			--Build and update
-			local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilterInstance.LeaderIcon);
-			filterLeaderIcon:UpdateIcon(iconName, i, true);
+			--local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilterInstance.LeaderIcon);
+			--filterLeaderIcon:UpdateIcon(iconName, i, true);
 			uiFilterInstance.PlayerFilter:GetButton():SetText(Locale.Lookup(PlayerConfigurations[i]:GetLeaderName()));
 		end
 		m_leaderFilter = i;
 		FilterGossip();
 	end);
+	
+	--Timer1Tick("ViewGossipPage: fetch all");
 
 	uiFilterInstance.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
 	uiFilterInstance.LeaderIcon.Portrait:SetHide(false);
@@ -152,7 +155,7 @@ function ViewGossipPage()
 	uiFilterInstance.PlayerFilter:GetButton():SetText(Locale.Lookup("LOC_HUD_REPORTS_PLAYER_FILTER_ALL"));
 
 	table.sort(kGossipLog, function(a, b) return a[2] > b[2]; end);
-	
+	Timer2Start();
 	for _, kGossipEntry in pairs(kGossipLog) do
 		local leaderName:string = PlayerConfigurations[kGossipEntry[4]]:GetLeaderTypeName();
 		local iconName:string = "ICON_" .. leaderName;
@@ -162,8 +165,8 @@ function ViewGossipPage()
 		local kGossipData:table = GameInfo.Gossips[kGossipEntry[3]];
 		
 		--Build and update
-		local gossipLeaderIcon:table = LeaderIcon:AttachInstance(pGossipInstance.Leader);
-		gossipLeaderIcon:UpdateIcon(iconName, kGossipEntry[4], true);
+		--local gossipLeaderIcon:table = LeaderIcon:AttachInstance(pGossipInstance.Leader);
+		--gossipLeaderIcon:UpdateIcon(iconName, kGossipEntry[4], true);
 		
 		pGossipInstance.Date:SetText(kGossipEntry[2]);
 		pGossipInstance.Icon:SetIcon("ICON_GOSSIP_" .. kGossipData.GroupType);
@@ -172,7 +175,10 @@ function ViewGossipPage()
 		--Build our references
 		table.insert(m_kGossipInstances, {instance = pGossipInstance, leaderID = kGossipEntry[4], gossipType = kGossipData.GroupType});
 	end
-		--Refresh our sizes
+	Timer2Tick("ViewGossipPage: display only");
+	--Timer1Tick("ViewGossipPage: display");
+
+	--Refresh our sizes
 	uiFilterInstance.GroupFilter:CalculateInternals();
 	uiFilterInstance.PlayerFilter:CalculateInternals();
 
