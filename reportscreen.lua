@@ -141,6 +141,19 @@ m_kCurrentTab = 1;
 -- 230425 #7 cache for storing list of units for abilities
 g_AbilitiesUnits = {}; -- this is based on TypeTags table, so it is static
 
+-- 230510 Dirty flags - if true then the data needs to be updated
+g_DirtyFlag = {
+	YIELDS = true,
+	RESOURCES = true,
+	CITYSTATUS = true,
+	GOSSIP = true,
+	DEALS = true,
+	UNITS = true,
+	POLICY = true,
+	MINOR = true,
+	CITIES2 = true,
+};
+
 
 -- ===========================================================================
 -- 230510 SupportFunctions: TruncateString, TruncateStringWithTooltip, Clamp, Round
@@ -317,6 +330,9 @@ function Close()
 	LuaEvents.ReportScreen_Closed();
 	--print("Closing... current tab is:", m_kCurrentTab);
 	tUnitSort.parent = nil; -- unit upgrades off the report screen should not call re-sort
+	
+	-- 230510 Set dirty flags to true
+	for flag,_ in pairs(g_DirtyFlag) do g_DirtyFlag[flag] = true; end
 end
 
 
@@ -336,8 +352,8 @@ end
 --	4: Gossip		UpdateGossipData		ViewGossipPage
 --	5: Deals		UpdateDealsData			ViewDealsPage
 --	6: Units		UpdateUnitsData			ViewUnitsPage
---	7: Policies		UpdatePolicyData		ViewPolicyPage
---	8: Minors		UpdateMinorData			ViewMinorPage
+--	7: Policy		UpdatePolicyData		ViewPolicyPage
+--	8: Minor		UpdateMinorData			ViewMinorPage
 --	9: Cities2		UpdateCities2Data		ViewCities2Page
 -- ===========================================================================
 function Open( tabToOpen:number )
@@ -349,18 +365,18 @@ function Open( tabToOpen:number )
 	--LuaEvents.ReportScreen_Opened();
 
 	-- BRS !! new line to add new variables 
-	Timer2Start()
+	--Timer2Start()
 	--m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
-	UpdateYieldsData();
-	UpdateResourcesData();
-	UpdateCityStatusData();
-	UpdateGossipData();
-	UpdateDealsData();
-	UpdateUnitsData();
-	UpdatePolicyData();
-	UpdateMinorData();
-	UpdateCities2Data();
-	Timer2Tick("GetData")
+	--UpdateYieldsData();
+	--UpdateResourcesData();
+	--UpdateCityStatusData();
+	--UpdateGossipData();
+	--UpdateDealsData();
+	--UpdateUnitsData();
+	--UpdatePolicyData();
+	--UpdateMinorData();
+	--UpdateCities2Data();
+	--Timer2Tick("GetData")
 	
 	-- To remember the last opened tab when the report is re-opened: ARISTOS
 	if tabToOpen ~= nil then m_kCurrentTab = tabToOpen; end
@@ -2239,12 +2255,16 @@ function UpdateYieldsData()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateYieldsData");
+	g_DirtyFlag.YIELDS = false;
 end
 
 local populationToCultureScale:number = GameInfo.GlobalParameters["CULTURE_PERCENTAGE_YIELD_PER_POP"].Value / 100;
 local populationToScienceScale:number = GameInfo.GlobalParameters["SCIENCE_PERCENTAGE_YIELD_PER_POP"].Value / 100; -- Infixo added science per pop
 
 function ViewYieldsPage()
+	print("ViewYieldsPage");
+
+	if g_DirtyFlag.YIELDS then UpdateYieldsData(); end
 
 	ResetTabForNewPageContent();
 
@@ -2955,9 +2975,13 @@ function UpdateResourcesData()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateResourcesData");
+	g_DirtyFlag.RESOURCES = false;
 end
 
-function ViewResourcesPage()	
+function ViewResourcesPage()
+	print("ViewResourcesPage");
+	
+	if g_DirtyFlag.RESOURCES then UpdateResourcesData(); end
 
 	ResetTabForNewPageContent();
 
@@ -3168,10 +3192,15 @@ end
 function UpdateGossipData()
 	print("UpdateGossipData");
 	-- no data reading here, it reads all in ViewGossipPage
+	g_DirtyFlag.GOSSIP = false;
 end
 
 --	Tab Callback
 function ViewGossipPage()
+	print("ViewGossipPage");
+	
+	if g_DirtyFlag.GOSSIP then UpdateGossipData(); end
+	
 	Timer1Start();
 	ResetTabForNewPageContent();
 	local playerID:number = Game.GetLocalPlayer();
@@ -3351,6 +3380,7 @@ function UpdateCityStatusData()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCityStatusData");
+	g_DirtyFlag.CITYSTATUS = false;
 end
 
 function GetFontIconForDistrict(sDistrictType:string)
@@ -3795,7 +3825,10 @@ function city_sortFunction( descend, type, t, a, b )
 
 end
 
-function ViewCityStatusPage()	
+function ViewCityStatusPage()
+	print("ViewCityStatusPage");
+	
+	if g_DirtyFlag.CITYSTATUS then UpdateCityStatusData(); end
 
 	ResetTabForNewPageContent();
 
@@ -3864,6 +3897,7 @@ function UpdateUnitsData()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateUnitsData");
+	g_DirtyFlag.UNITS = false;
 end
 
 -- returns the name of the City that the unit is currently in, or ""
@@ -4390,6 +4424,9 @@ function group_trader( unit, unitInstance, group, parent, type )
 end
 
 function ViewUnitsPage()
+	print("ViewUnitsPage");
+	
+	if g_DirtyFlag.UNITS then UpdateUnitsData(); end
 
 	ResetTabForNewPageContent();
 	tUnitSort.parent = nil;
@@ -4476,9 +4513,13 @@ function UpdateDealsData()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateDealsData");
+	g_DirtyFlag.DEALS = false;
 end
 
 function ViewDealsPage()
+	print("ViewDealsPage");
+	
+	if g_DirtyFlag.DEALS then UpdateDealsData(); end
 
 	ResetTabForNewPageContent();
 	
@@ -4653,11 +4694,15 @@ function UpdatePolicyData()
 	end -- all beliefs
 	Timer1Tick("UpdatePolicyData");
 	--for policyGroup,policies in pairs(m_kPolicyData) do print(policyGroup, table.count(policies)); end
+	g_DirtyFlag.POLICY = false;
 end
 
 
 function ViewPolicyPage()
-	--print("FUN ViewPolicyPage");
+	print("ViewPolicyPage");
+	
+	if g_DirtyFlag.POLICY then UpdatePolicyData(); end
+	
 	ResetTabForNewPageContent();
 
 	-- fill
@@ -4760,7 +4805,7 @@ end
 
 
 -- ===========================================================================
--- MINORS PAGE
+-- MINOR PAGE
 -- ===========================================================================
 
 -- helper to get Category out of Civ Type; categories are: CULTURAL, INDUSTRIAL, MILITARISTIC, etc.
@@ -4932,9 +4977,13 @@ function UpdateMinorData()
 
 	Timer1Tick("UpdateMinorData");
 	--dshowrectable(m_kMinorData);
+	g_DirtyFlag.MINOR = false;
 end
 
 function ViewMinorPage()
+	print("ViewMinorPage");
+	
+	if g_DirtyFlag.MINOR then UpdateMinorData(); end
 
 	ResetTabForNewPageContent();
 
@@ -5042,6 +5091,7 @@ function UpdateCities2Data()
 	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCities2Data");
+	g_DirtyFlag.CITIES2 = false;
 end
 
 -- helpers
@@ -5204,8 +5254,11 @@ function city2_sortFunction( descend, type, t, a, b )
 	
 end
 
-function ViewCities2Page()	
+function ViewCities2Page()
+	print("ViewCities2Page");
 
+	if g_DirtyFlag.CITIES2 then UpdateCities2Data(); end
+	
 	ResetTabForNewPageContent();
 
 	local instance:table = m_simpleIM:GetInstance();
