@@ -373,22 +373,35 @@ function Open( tabToOpen:number )
 	m_tabs.SelectTab( m_kCurrentTab );
 	
 	-- show number of cities in the title bar
-	local tTT:table = {};
+	local playerID: number = Game.GetLocalPlayer();
+	if playerID == PlayerTypes.NONE or playerID == PlayerTypes.OBSERVER then
+		Controls.TotalsLabel:SetText("");
+		Controls.TotalsLabel:SetToolTipString("");
+		return;
+	end
+	local pPlayer: table = Players[playerID];
+	local iCit: number = Players[playerID]:GetCities():GetCount();
 	local iWon:number, iDis:number, iBul:number, iPop:number = 0, 0, 0, 0;
-	for _,city in pairs(m_kCityData) do
-		iWon = iWon + #city.Wonders;
-		iDis = iDis + city.DistrictsNum;
-		iBul = iBul + city.BuildingsNum;
-		iPop = iPop + city.Population;
+	-- count districts and population
+	for _,city in pPlayer:GetCities():Members() do
+		iDis = iDis + city:GetDistricts():GetNumZonedDistrictsRequiringPopulation();
+		iPop = iPop + city:GetPopulation();
+	end
+	local playerStats: table = pPlayer:GetStats();
+	-- count wonders and buildings
+	for building in GameInfo.Buildings() do
+		local num: number = playerStats:GetNumBuildingsOfType(building.Index);
+		if building.IsWonder then iWon = iWon + num; else iBul = iBul + num; end
 	end
 	local iCiv:number, iMil:number = 0, 0;
-	local playerID:number = Game.GetLocalPlayer();
-	if playerID ~= PlayerTypes.NONE and playerID ~= PlayerTypes.OBSERVER then
-		for _,unit in Players[playerID]:GetUnits():Members() do
-			if GameInfo.Units[unit:GetUnitType()].FormationClass == "FORMATION_CLASS_CIVILIAN" then iCiv = iCiv + 1; else iMil = iMil + 1; end
-		end -- for
-	end -- if
-	Controls.TotalsLabel:SetText( Locale.Lookup("LOC_DIPLOMACY_DEAL_CITIES").." "..tostring(Players[Game.GetLocalPlayer()]:GetCities():GetCount()) );
+	-- count units
+	for _,unit in pPlayer:GetUnits():Members() do
+		if GameInfo.Units[unit:GetUnitType()].FormationClass == "FORMATION_CLASS_CIVILIAN" then iCiv = iCiv + 1; else iMil = iMil + 1; end
+	end -- for
+	Controls.TotalsLabel:SetText( Locale.Lookup("LOC_DIPLOMACY_DEAL_CITIES").." "..tostring(iCit) );
+	
+	-- build a tooltip with details
+	local tTT:table = {};
 	table.insert(tTT, Locale.Lookup("LOC_RAZE_CITY_POPULATION_LABEL").." "..tostring(iPop));
 	table.insert(tTT, Locale.Lookup("LOC_TECH_FILTER_WONDERS")..": "..tostring(iWon));
 	table.insert(tTT, Locale.Lookup("LOC_DEAL_CITY_DISTRICTS_TOOLTIP").." "..tostring(iDis));
