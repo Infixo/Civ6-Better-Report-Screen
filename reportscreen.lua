@@ -4,10 +4,23 @@ print("Loading ReportScreen.lua from Better Report Screen version "..GlobalParam
 --	All the data
 --  Copyright 2016-2018, Firaxis Games
 -- ===========================================================================
-include("CitySupport"); -- GetCityData big, 
+--  Better Report Screen by Infixo, 2018-2023
+--  Navigation helper
+--	1: Yields		UpdateYieldsData		ViewYieldsPage		BRSPage_Yields
+--	2: Resources	UpdateResourcesData		ViewResourcesPage	BRSPage_Resources
+--	3: CityStatus	UpdateCityStatusData	ViewCityStatusPage	BRSPage_CityStatus
+--	4: Gossip		UpdateGossipData		ViewGossipPage		BRSPage_Gossip
+--	5: Deals		UpdateDealsData			ViewDealsPage		BRSPage_Deals
+--	6: Units		UpdateUnitsData			ViewUnitsPage		BRSPage_Units
+--	7: Policy		UpdatePolicyData		ViewPolicyPage		BRSPage_Policy
+--	8: Minor		UpdateMinorData			ViewMinorPage		BRSPage_Minor
+--	9: Cities2		UpdateCities2Data		ViewCities2Page		BRSPage_Cities2
+-- ===========================================================================
+
+include("CitySupport"); -- GetCityData
 include("Civ6Common");
 include("InstanceManager");
---include("SupportFunctions"); -- TruncateString in Policies, TruncateStringWithTooltip, Clamp in CitySupport, Round often, 
+--include("SupportFunctions"); -- TruncateString, TruncateStringWithTooltip, Clamp, Round
 include("TabSupport");
 include("LeaderIcon"); -- Used by Gossip page
 
@@ -39,12 +52,12 @@ local m_debugNumResourcesLuxuries	:number = 0;			-- (0) number of extra luxuries
 -- ===========================================================================
 --	CONSTANTS
 -- ===========================================================================
-local LL = Locale.Lookup;
-local ENDCOLOR									:string = "[ENDCOLOR]";
+LL = Locale.Lookup;
+ENDCOLOR = "[ENDCOLOR]";
 local DARKEN_CITY_INCOME_AREA_ADDITIONAL_Y		:number = 6;
 local DATA_FIELD_SELECTION						:string = "Selection";
 local SIZE_HEIGHT_BOTTOM_YIELDS					:number = 135;
-local SIZE_HEIGHT_PADDING_BOTTOM_ADJUST			:number = 87;	-- (Total Y - (scroll area + THIS PADDING)) = bottom area
+SIZE_HEIGHT_PADDING_BOTTOM_ADJUST = 87;	-- (Total Y - (scroll area + THIS PADDING)) = bottom area
 local INDENT_STRING								:string = "      ";
 local TOOLTIP_SEP								:string = "-------------------";
 local TOOLTIP_SEP_NEWLINE						:string = "[NEWLINE]"..TOOLTIP_SEP.."[NEWLINE]";
@@ -103,17 +116,16 @@ end
 --	VARIABLES
 -- ===========================================================================
 
-m_simpleIM							= InstanceManager:new("SimpleInstance",			"Top",		Controls.Stack);				-- Non-Collapsable, simple
-m_tabIM								= InstanceManager:new("TabInstance",				"Button",	Controls.TabContainer);
-m_strategicResourcesIM				= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.StrategicResources);
-m_bonusResourcesIM					= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.BonusResources);
-m_luxuryResourcesIM					= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.LuxuryResources);
-local m_groupIM				:table  = InstanceManager:new("GroupInstance",			"Top",		Controls.Stack);				-- Collapsable
+m_simpleIM				= InstanceManager:new("SimpleInstance",			"Top",		Controls.Stack);				-- Non-Collapsable, simple
+m_tabIM					= InstanceManager:new("TabInstance",			"Button",	Controls.TabContainer);
+m_strategicResourcesIM	= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.StrategicResources);
+m_bonusResourcesIM		= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.BonusResources);
+m_luxuryResourcesIM		= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.LuxuryResources);
+m_groupIM				= InstanceManager:new("GroupInstance",			"Top",		Controls.Stack);				-- Collapsable
 
 
 m_kCityData = nil;
 m_tabs = nil;
-m_kResourceData = nil;
 local m_kCityTotalData		:table = nil;
 local m_kUnitData			:table = nil;	-- TODO: Show units by promotion class
 local m_kDealData			:table = nil;
@@ -346,15 +358,6 @@ end
 
 -- ===========================================================================
 --	Single entry point for display
---	1: Yields		UpdateYieldsData		ViewYieldsPage
---	2: Resources	UpdateResourcesData		ViewResourcesPage
---	3: CityStatus	UpdateCityStatusData	ViewCityStatusPage
---	4: Gossip		UpdateGossipData		ViewGossipPage
---	5: Deals		UpdateDealsData			ViewDealsPage
---	6: Units		UpdateUnitsData			ViewUnitsPage
---	7: Policy		UpdatePolicyData		ViewPolicyPage
---	8: Minor		UpdateMinorData			ViewMinorPage
---	9: Cities2		UpdateCities2Data		ViewCities2Page
 -- ===========================================================================
 function Open( tabToOpen:number )
 	--print("FUN Open()", tabToOpen);
@@ -363,20 +366,6 @@ function Open( tabToOpen:number )
 	Controls.ScreenAnimIn:Play();
 	UI.PlaySound("UI_Screen_Open");
 	--LuaEvents.ReportScreen_Opened();
-
-	-- BRS !! new line to add new variables 
-	--Timer2Start()
-	--m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
-	--UpdateYieldsData();
-	--UpdateResourcesData();
-	--UpdateCityStatusData();
-	--UpdateGossipData();
-	--UpdateDealsData();
-	--UpdateUnitsData();
-	--UpdatePolicyData();
-	--UpdateMinorData();
-	--UpdateCities2Data();
-	--Timer2Tick("GetData")
 	
 	-- To remember the last opened tab when the report is re-opened: ARISTOS
 	if tabToOpen ~= nil then m_kCurrentTab = tabToOpen; end
@@ -1380,202 +1369,6 @@ function GetData()
 	return kCityData, kCityTotalData, kResources, kUnitData, kDealData, kCurrentDeals, kUnitDataReport;
 end
 
-function AddMiscResourceData(pResourceData:table, kResourceTable:table)
-	if bIsGatheringStorm then return AddMiscResourceDataXP2(pResourceData, kResourceTable); end
-	
-	-- Resources not yet accounted for come from other gameplay bonuses
-	if pResourceData then
-		for row in GameInfo.Resources() do
-			local internalResourceAmount:number = pResourceData:GetResourceAmount(row.Index);
-			if (internalResourceAmount > 0) then
-				if (kResourceTable[row.Index] ~= nil) then
-					if (internalResourceAmount > kResourceTable[row.Index].Total) then
-						AddResourceData(kResourceTable, row.Index, "LOC_HUD_REPORTS_MISC_RESOURCE_SOURCE", "-", internalResourceAmount - kResourceTable[row.Index].Total);
-					end
-				else
-					AddResourceData(kResourceTable, row.Index, "LOC_HUD_REPORTS_MISC_RESOURCE_SOURCE", "-", internalResourceAmount);
-				end
-			end
-		end
-	end
-	return kResourceTable;
-end
-
-function AddMiscResourceDataXP2(pResourceData:table, kResourceTable:table)
-	--Append our resource entries before we continue
-	kResourceTable = AppendXP2ResourceData(kResourceTable);
-
-	-- Resources not yet accounted for come from other gameplay bonuses
-	if pResourceData then
-		for row in GameInfo.Resources() do
-			local internalResourceAmount:number = pResourceData:GetResourceAmount(row.Index);
-			local resourceUnitConsumptionPerTurn:number = -pResourceData:GetUnitResourceDemandPerTurn(row.ResourceType);
-			local resourcePowerConsumptionPerTurn:number = -pResourceData:GetPowerResourceDemandPerTurn(row.ResourceType);
-			local resourceAccumulationPerTurn:number = pResourceData:GetResourceAccumulationPerTurn(row.ResourceType);
-			local resourceDelta:number = resourceUnitConsumptionPerTurn + resourcePowerConsumptionPerTurn + resourceAccumulationPerTurn;
-			if (row.ResourceClassType == "RESOURCECLASS_STRATEGIC") then
-				internalResourceAmount = resourceDelta;
-			end
-			if (internalResourceAmount > 0 or internalResourceAmount < 0) then
-				if (kResourceTable[row.Index] ~= nil) then
-					if (internalResourceAmount > kResourceTable[row.Index].Total) then
-						AddResourceData(kResourceTable, row.Index, "LOC_HUD_REPORTS_MISC_RESOURCE_SOURCE", "-", internalResourceAmount - kResourceTable[row.Index].Total);
-					end
-				else
-					AddResourceData(kResourceTable, row.Index, "LOC_HUD_REPORTS_MISC_RESOURCE_SOURCE", "-", internalResourceAmount);
-				end
-			end
-
-			--Stockpile only?
-			if pResourceData:GetResourceAmount(row.ResourceType) > 0 then
-				AddResourceData(kResourceTable, row.Index, "", "", 0);
-			end
-
-		end
-	end
-
-	return kResourceTable;
-end
-
--- ===========================================================================
-function AppendXP2ResourceData(kResourceData:table)
-	local playerID:number = Game.GetLocalPlayer();
-	if playerID == PlayerTypes.NONE then
-		UI.DataError("Unable to get valid playerID for ReportScreen_Expansion2.");
-		return;
-	end
-
-	local player:table  = Players[playerID];
-
-	local pResources:table	= player:GetResources();
-	if pResources then
-		for row in GameInfo.Resources() do
-			local resourceHash:number = row.Hash;
-			local resourceUnitCostPerTurn:number = pResources:GetUnitResourceDemandPerTurn(resourceHash);
-			local resourcePowerCostPerTurn:number = pResources:GetPowerResourceDemandPerTurn(resourceHash);
-			local reservedCostForProduction:number = pResources:GetReservedResourceAmount(resourceHash);
-			local miscResourceTotal:number = pResources:GetResourceAmount(resourceHash);
-			local importResources:number = pResources:GetResourceImportPerTurn(resourceHash);
-			
-			if resourceUnitCostPerTurn > 0 then
-				AddResourceData(kResourceData, row.Index, "LOC_PRODUCTION_PANEL_UNITS_TOOLTIP", "-", -resourceUnitCostPerTurn);
-			end
-
-			if resourcePowerCostPerTurn > 0 then
-				AddResourceData(kResourceData, row.Index, "LOC_UI_PEDIA_POWER_COST", "-", -resourcePowerCostPerTurn);
-			end
-
-			if reservedCostForProduction > 0 then
-				AddResourceData(kResourceData, row.Index, "LOC_RESOURCE_REPORTS_ITEM_IN_RESERVE", "-", -reservedCostForProduction);
-			end
-
-			if kResourceData[row.Index] == nil and miscResourceTotal > 0 then
-				local titleString:string = importResources > 0 and "LOC_RESOURCE_REPORTS_CITY_STATES" or "LOC_HUD_REPORTS_MISC_RESOURCE_SOURCE";
-				AddResourceData(kResourceData, row.Index, titleString, "-", miscResourceTotal);
-			elseif importResources > 0 then
-				AddResourceData(kResourceData, row.Index, "LOC_RESOURCE_REPORTS_CITY_STATES", "-", importResources);
-			end
-
-		end
-	end
-
-	return kResourceData;
-end
-
-function AddResourceData( kResources:table, eResourceType:number, EntryString:string, ControlString:string, InAmount:number)
-	local kResource :table = GameInfo.Resources[eResourceType];
-
-	--Artifacts need to be excluded because while TECHNICALLY a resource, they do nothing to contribute in a way that is relevant to any other resource 
-	--or screen. So... exclusion.
-	if kResource.ResourceClassType == "RESOURCECLASS_ARTIFACT" then
-		return;
-	end
-
-	local localPlayerID = Game.GetLocalPlayer();
-	local localPlayer = Players[localPlayerID];
-	if localPlayer then
-		local pPlayerResources:table	=  localPlayer:GetResources();
-		if pPlayerResources then
-	
-			if kResources[eResourceType] == nil then
-				kResources[eResourceType] = {
-					EntryList	= {},
-					Icon		= "[ICON_"..kResource.ResourceType.."]",
-					IsStrategic	= kResource.ResourceClassType == "RESOURCECLASS_STRATEGIC",
-					IsLuxury	= GameInfo.Resources[eResourceType].ResourceClassType == "RESOURCECLASS_LUXURY",
-					IsBonus		= GameInfo.Resources[eResourceType].ResourceClassType == "RESOURCECLASS_BONUS",
-					Total		= 0
-				};
-				if bIsGatheringStorm then
-					kResources[eResourceType].Maximum   = pPlayerResources:GetResourceStockpileCap(eResourceType);
-					kResources[eResourceType].Stockpile = pPlayerResources:GetResourceAmount(eResourceType);
-				end
-			end
-
-			if EntryString ~= "" then
-				table.insert( kResources[eResourceType].EntryList, 
-				{
-					EntryText	= EntryString,
-					ControlText = ControlString,
-					Amount		= InAmount,					
-				});
-			end
-
-			kResources[eResourceType].Total = kResources[eResourceType].Total + InAmount;
-		end -- pPlayerResources
-	end -- localPlayer
-end
-
--- ===========================================================================
---	Obtain the total resources for a given city.
--- ===========================================================================
-function GetCityResourceData( pCity:table )
-	if bIsGatheringStorm then return GetCityResourceDataXP2(pCity); end
-	
-	-- Loop through all the plots for a given city; tallying the resource amount.
-	local kResources : table = {};
-	local cityPlots : table = Map.GetCityPlots():GetPurchasedPlots(pCity)
-	for _, plotID in ipairs(cityPlots) do
-		local plot			: table = Map.GetPlotByIndex(plotID)
-		local plotX			: number = plot:GetX()
-		local plotY			: number = plot:GetY()
-		local eResourceType : number = plot:GetResourceType();
-
-		-- TODO: Account for trade/diplomacy resources.
-		if eResourceType ~= -1 and Players[pCity:GetOwner()]:GetResources():IsResourceExtractableAt(plot) then
-			if kResources[eResourceType] == nil then
-				kResources[eResourceType] = 1;
-			else
-				kResources[eResourceType] = kResources[eResourceType] + 1;
-			end
-		end
-	end
-	return kResources;
-end
-
--- a new function used: GetResourcesExtractedByCity
-function GetCityResourceDataXP2( pCity:table )
-	-- Loop through all the plots for a given city; tallying the resource amount.
-	local kResources : table = {};
-	local localPlayerID = Game.GetLocalPlayer();
-	local localPlayer = Players[localPlayerID];
-	if localPlayer then
-		local pPlayerResources:table = localPlayer:GetResources();
-		if pPlayerResources then
-			local kExtractedResources = pPlayerResources:GetResourcesExtractedByCity( pCity:GetID(), ResultFormat.SUMMARY );
-			if kExtractedResources ~= nil and table.count(kExtractedResources) > 0 then
-				for i, entry in ipairs(kExtractedResources) do
-					if entry.Amount > 0 then
-						kResources[entry.ResourceType] = entry.Amount;
-					end
-				end
-			end
-		end
-	end
-	return kResources;
-end
-
-
 -- ===========================================================================
 --	Obtain the yields from the worked plots
 -- Infixo: again, original function is incomplete, the game uses a different algorithm
@@ -2249,11 +2042,12 @@ end
 -- ===========================================================================
 --	YIELDS PAGE
 -- ===========================================================================
+include("BRSPage_Yields");
 
 function UpdateYieldsData()
 	print("UpdateYieldsData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateYieldsData");
 	g_DirtyFlag.YIELDS = false;
 end
@@ -2969,225 +2763,12 @@ end
 -- ===========================================================================
 -- RESOURCES PAGE
 -- ===========================================================================
-
-function UpdateResourcesData()
-	print("UpdateResourcesData");
-	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
-	Timer1Tick("UpdateResourcesData");
-	g_DirtyFlag.RESOURCES = false;
-end
-
-function ViewResourcesPage()
-	print("ViewResourcesPage");
-	
-	if g_DirtyFlag.RESOURCES then UpdateResourcesData(); end
-
-	ResetTabForNewPageContent();
-
-	local strategicResources:string = "";
-	local luxuryResources	:string = "";
-	local kBonuses			:table	= {};
-	local kLuxuries			:table	= {};
-	local kStrategics		:table	= {};
-    local localPlayerID = Game.GetLocalPlayer();
-	local localPlayer = Players[localPlayerID];
-    
-    -- 2021-05-12 Monopolies Mode
-	-- find out if Mercantilism is unlocked
-	local bMercantailismUnlocked:boolean = false;
-    if GameInfo.Civics.CIVIC_MERCANTILISM then
-        bMercantailismUnlocked = localPlayer:GetCulture():HasCivic(GameInfo.Civics.CIVIC_MERCANTILISM.Index);
-    end
-	
-	local function FormatStrategicTotal(iTot:number)
-		if iTot < 0 then return "[COLOR_Red]"..tostring(iTot).."[ENDCOLOR]";
-		else             return "+"..tostring(iTot); end
-	end
-
-	--for eResourceType,kSingleResourceData in pairs(m_kResourceData) do
-	for eResourceType,kSingleResourceData in spairs(m_kResourceData, function(t,a,b) return Locale.Lookup(GameInfo.Resources[a].Name) < Locale.Lookup(GameInfo.Resources[b].Name) end) do
-		
-		local kResource :table = GameInfo.Resources[eResourceType];
-		
-		--!!ARISTOS: Only display list of selected resource types, according to checkboxes
-		if (kSingleResourceData.IsStrategic and Controls.StrategicCheckbox:IsSelected()) or
-			(kSingleResourceData.IsLuxury and Controls.LuxuryCheckbox:IsSelected()) or
-			(kSingleResourceData.IsBonus and Controls.BonusCheckbox:IsSelected()) then
-
-		local instance:table = NewCollapsibleGroupInstance();	
-
-		instance.RowHeaderButton:SetText(  kSingleResourceData.Icon..Locale.Lookup( kResource.Name ) );
-		instance.RowHeaderLabel:SetHide( false ); --BRS
-		if kSingleResourceData.Total < 0 then
-			instance.RowHeaderLabel:SetText( Locale.Lookup("LOC_HUD_REPORTS_TOTALS").." [COLOR_Red]"..tostring(kSingleResourceData.Total).."[ENDCOLOR]" );
-		else
-			instance.RowHeaderLabel:SetText( Locale.Lookup("LOC_HUD_REPORTS_TOTALS").." "..tostring(kSingleResourceData.Total) );
-		end
-		if bIsGatheringStorm and kSingleResourceData.IsStrategic then
-			instance.RowHeaderLabel:SetText( Locale.Lookup("LOC_HUD_REPORTS_TOTALS")..string.format(" %d/%d ", kSingleResourceData.Stockpile, kSingleResourceData.Maximum)..FormatStrategicTotal(kSingleResourceData.Total) );
-		end
-
-		local pHeaderInstance:table = {};
-		ContextPtr:BuildInstanceForControl( "ResourcesHeaderInstance", pHeaderInstance, instance.ContentStack ) ;
-
-		local kResourceEntries:table = kSingleResourceData.EntryList;
-		for i,kEntry in ipairs(kResourceEntries) do
-			local pEntryInstance:table = {};
-			ContextPtr:BuildInstanceForControl( "ResourcesEntryInstance", pEntryInstance, instance.ContentStack ) ;
-			pEntryInstance.CityName:SetText( Locale.Lookup(kEntry.EntryText) );
-			pEntryInstance.Control:SetText( Locale.Lookup(kEntry.ControlText) );
-			pEntryInstance.Amount:SetText( (kEntry.Amount<=0) and tostring(kEntry.Amount) or "+"..tostring(kEntry.Amount) );
-		end
-
-		--local pFooterInstance:table = {};
-		--ContextPtr:BuildInstanceForControl( "ResourcesFooterInstance", pFooterInstance, instance.ContentStack ) ;
-		--pFooterInstance.Amount:SetText( tostring(kSingleResourceData.Total) );
-
-		-- Show how many of this resource are being allocated to what cities
-		local citiesProvidedTo: table = localPlayer:GetResources():GetResourceAllocationCities(GameInfo.Resources[kResource.ResourceType].Index);
-		local numCitiesProvidingTo: number = table.count(citiesProvidedTo);
-		if (numCitiesProvidingTo > 0) then
-			--pFooterInstance.AmenitiesContainer:SetHide(false);
-			instance.AmenitiesContainer:SetHide(false); ---BRS
-			--pFooterInstance.Amenities:SetText("[ICON_Amenities][ICON_GoingTo]"..numCitiesProvidingTo.." "..Locale.Lookup("LOC_PEDIA_CONCEPTS_PAGEGROUP_CITIES_NAME"));
-			instance.Amenities:SetText("[ICON_Amenities][ICON_GoingTo]"..Locale.Lookup("LOC_HUD_REPORTS_CITY_AMENITIES", numCitiesProvidingTo));
-			local amenitiesTooltip: string = "";
-			local playerCities = localPlayer:GetCities();
-			for i,city in ipairs(citiesProvidedTo) do
-				local cityName = Locale.Lookup(playerCities:FindID(city.CityID):GetName());
-				if i ~=1 then
-					amenitiesTooltip = amenitiesTooltip.. "[NEWLINE]";
-				end
-				amenitiesTooltip = amenitiesTooltip.. city.AllocationAmount.." [ICON_".. kResource.ResourceType.."] [Icon_GoingTo] " ..cityName;
-			end
-			--pFooterInstance.Amenities:SetToolTipString(amenitiesTooltip);
-			instance.Amenities:SetToolTipString(amenitiesTooltip);
-		else
-			--pFooterInstance.AmenitiesContainer:SetHide(true);
-			instance.AmenitiesContainer:SetHide(true);
-		end
-        
-        -- 2021-05-12 Monopolies Mode
-        if bIsMonopolies and kSingleResourceData.IsLuxury and GameInfo.ResourceIndustries[kResource.ResourceType] ~= nil then -- also check if there is an industry around it!
-            local pGameEconomic:table = Game.GetEconomicManager();
-            local iControlled:number = pGameEconomic:GetNumControlledResources(localPlayerID, eResourceType);
-            local sText:string, sTT:string = "", "";
-            local sTTHead = "[ICON_".. kResource.ResourceType.."]"..LL(kResource.Name);
-            -- find industry effect and type - match [ICON_xxx]
-            local sEffectI:string = LL(GameInfo.ResourceIndustries[kResource.ResourceType].ResourceEffectTExt);
-            local sIndustryType:string = string.match(sEffectI, "%[ICON_%a+%]");
-            -- find corporation effect and type - match [ICON_xxx]
-            local sEffectC:string = LL(GameInfo.ResourceCorporations[kResource.ResourceType].ResourceEffectTExt);
-            local sCorpoType:string = string.match(sEffectC, "%[ICON_%a+%]");
-            -- logic goes top-down, i.e. from corporation to industry
-            if pGameEconomic:HasCorporationOf(localPlayerID, eResourceType) then
-                -- corpo: YES
-                sText = string.format("%d %s  [ICON_GreatWork_Product][ICON_GreatWork_Product] %s", iControlled, sCorpoType, LL("LOC_IMPROVEMENT_CORPORATION_NAME"));
-                sTT = sTTHead..sEffectC;
-            else
-                -- corpo: NO, check Industry
-                if pGameEconomic:HasIndustryOf(localPlayerID, eResourceType) then
-                    sText = string.format("%d %s  [ICON_GreatWork_Product] %s", iControlled, sIndustryType, LL("LOC_IMPROVEMENT_INDUSTRY_NAME"));
-                else
-                    sText = string.format("%d %s  [ICON_Not]", iControlled, sIndustryType);
-                end
-                sTT = sTTHead..sEffectI;
-            end
-            -- if we can have an industry - add the mark
-            if pGameEconomic:CanHaveIndustry(localPlayerID, eResourceType) then
-                sText = sText.." [ICON_New] "..LL("LOC_IMPROVEMENT_INDUSTRY_NAME");
-                sTT = sTT.."[NEWLINE]"..LL("LOC_NOTIFICATION_INDUSTRY_OPPORTUNITY_SUMMARY", iControlled, "[ICON_".. kResource.ResourceType.."]", LL(kResource.Name)); -- {1_num} {2_ResourceIcon} {3_Resource}
-            end
-            -- if we can have a corpo - add the mark
-            if pGameEconomic:CanHaveCorporation(localPlayerID, eResourceType) then
-                sText = sText.." [ICON_New] "..LL("LOC_IMPROVEMENT_CORPORATION_NAME");
-                sTT = sTT.."[NEWLINE]"..LL("LOC_NOTIFICATION_CORPORATION_OPPORTUNITY_SUMMARY", iControlled, "[ICON_".. kResource.ResourceType.."]", LL(kResource.Name)); -- {1_num} {2_ResourceIcon} {3_Resource}
-                sTT = sTT.."[NEWLINE][ICON_GoingTo]"..LL("LOC_IMPROVEMENT_CORPORATION_NAME")..sEffectC;
-
-            end
-            -- show info
-            instance.Industry:SetText(sText);
-            instance.Industry:SetToolTipString(sTT);
-            instance.IndustryContainer:SetHide(false);
-        else
-            instance.IndustryContainer:SetHide(true);
-        end
-
-        -- 2021-05-12 Monopolies Mode
-        if bIsMonopolies and kSingleResourceData.IsLuxury and GameInfo.ResourceIndustries[kResource.ResourceType] ~= nil and bMercantailismUnlocked then
-            local pGameEconomic:table = Game.GetEconomicManager();
-            local iControlled:number = pGameEconomic:GetNumControlledResources(localPlayerID, eResourceType);
-            local kMapResources:table = pGameEconomic:GetMapResources();
-            local iTotal:number = kMapResources[eResourceType];
-			local iMonopolyID:number = pGameEconomic:GetResourceMonopolyPlayer(eResourceType);
-            local sText:string = string.format("%d/%d  %d%%  %s", iControlled, iTotal, 100*iControlled/iTotal, (iMonopolyID == localPlayerID and LL("LOC_RESREPORT_MONOPOLY_NAME") or LL("LOC_RESREPORT_CONTROL")));
-            if 100*(iControlled+1)/iTotal > 60 then sText = sText.." [ICON_New]"; end
-            if iMonopolyID == localPlayerID then sText = "[COLOR_Green]"..sText.."[ENDCOLOR]"; end
-            instance.Monopoly:SetText(sText);
-            instance.MonopolyContainer:SetHide(false);
-        else
-            instance.MonopolyContainer:SetHide(true);
-        end
-
-		--SetGroupCollapsePadding(instance, pFooterInstance.Top:GetSizeY() ); --BRS moved into if
-		SetGroupCollapsePadding(instance, 0); --BRS no footer
-		RealizeGroup( instance ); --BRS moved into if
-
-		end -- ARISTOS checkboxes
-
-		local tResBottomData:table = {
-			Text    = kSingleResourceData.Icon..                                      tostring(kSingleResourceData.Total),
-			ToolTip = kSingleResourceData.Icon..Locale.Lookup( kResource.Name ).." "..tostring(kSingleResourceData.Total),
-		};
-		if bIsGatheringStorm and kSingleResourceData.IsStrategic then
-			tResBottomData.Text    = string.format("%s%d/%d ",     kSingleResourceData.Icon,                                  kSingleResourceData.Stockpile, kSingleResourceData.Maximum)..FormatStrategicTotal(kSingleResourceData.Total);
-			tResBottomData.ToolTip = string.format("%s %s %d/%d ", kSingleResourceData.Icon, Locale.Lookup( kResource.Name ), kSingleResourceData.Stockpile, kSingleResourceData.Maximum)..FormatStrategicTotal(kSingleResourceData.Total);
-		end
-		if     kSingleResourceData.IsStrategic then table.insert(kStrategics, tResBottomData);
-		elseif kSingleResourceData.IsLuxury    then table.insert(kLuxuries,   tResBottomData);
-		else                                        table.insert(kBonuses,    tResBottomData); end
-		
-		--SetGroupCollapsePadding(instance, pFooterInstance.Top:GetSizeY() ); --BRS moved into if
-		--RealizeGroup( instance ); --BRS moved into if
-	end
-	
-	local function ShowResources(kResIM:table, kResources:table)
-		kResIM:ResetInstances();
-		for i,v in ipairs(kResources) do
-			local resourceInstance:table = kResIM:GetInstance();
-			resourceInstance.Info:SetText( v.Text );
-			resourceInstance.Info:SetToolTipString( v.ToolTip );
-		end
-	end
-	ShowResources(m_strategicResourcesIM, kStrategics);
-	Controls.StrategicResources:CalculateSize();
-	Controls.StrategicGrid:ReprocessAnchoring();
-	ShowResources(m_bonusResourcesIM, kBonuses);
-	Controls.BonusResources:CalculateSize();
-	Controls.BonusGrid:ReprocessAnchoring();
-	ShowResources(m_luxuryResourcesIM, kLuxuries);
-	Controls.LuxuryResources:CalculateSize();
-	Controls.LuxuryResources:ReprocessAnchoring();
-	--Controls.LuxuryGrid:ReprocessAnchoring();
-	
-	Controls.Stack:CalculateSize();
-	Controls.Scroll:CalculateSize();
-
-	Controls.CollapseAll:SetHide( false );
-	Controls.BottomYieldTotals:SetHide( true );
-	Controls.BottomResourceTotals:SetHide( false ); -- ViewResourcesPage
-	Controls.BottomPoliciesFilters:SetHide( true );
-	Controls.BottomMinorsFilters:SetHide( true );
-	Controls.Scroll:SetSizeY( Controls.Main:GetSizeY() - (Controls.BottomResourceTotals:GetSizeY() + SIZE_HEIGHT_PADDING_BOTTOM_ADJUST ) );	
-	-- Remember this tab when report is next opened: ARISTOS
-	m_kCurrentTab = 2;
-end
-
+include("BRSPage_Resources");
 
 -- ===========================================================================
 -- GOSSIP PAGE
 -- ===========================================================================
+include("BRSPage_Gossip");
 
 function UpdateGossipData()
 	print("UpdateGossipData");
@@ -3374,11 +2955,12 @@ end
 -- ===========================================================================
 -- CITY STATUS PAGE
 -- ===========================================================================
+include("BRSPage_CityStatus");
 
 function UpdateCityStatusData()
 	print("UpdateCityStatusData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCityStatusData");
 	g_DirtyFlag.CITYSTATUS = false;
 end
@@ -3891,11 +3473,12 @@ end
 -- ===========================================================================
 -- UNITS PAGE
 -- ===========================================================================
+include("BRSPage_Units");
 
 function UpdateUnitsData()
 	print("UpdateUnitsData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateUnitsData");
 	g_DirtyFlag.UNITS = false;
 end
@@ -4507,11 +4090,12 @@ end
 -- ===========================================================================
 -- CURRENT DEALS PAGE
 -- ===========================================================================
+include("BRSPage_Deals");
 
 function UpdateDealsData()
 	print("UpdateDealsData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateDealsData");
 	g_DirtyFlag.DEALS = false;
 end
@@ -4593,6 +4177,7 @@ end
 -- ===========================================================================
 -- POLICY PAGE
 -- ===========================================================================
+include("BRSPage_Policy");
 
 local tPolicyOrder:table = {
 	SLOT_MILITARY = 1,
@@ -4807,6 +4392,7 @@ end
 -- ===========================================================================
 -- MINOR PAGE
 -- ===========================================================================
+include("BRSPage_Minor");
 
 -- helper to get Category out of Civ Type; categories are: CULTURAL, INDUSTRIAL, MILITARISTIC, etc.
 function GetCityStateCategory(sCivType:string)
@@ -5085,11 +4671,12 @@ end
 -- ===========================================================================
 -- CITIES 2 PAGE - GATHERING STORM
 -- ===========================================================================
+include("BRSPage_Cities2");
 
 function UpdateCities2Data()
 	print("UpdateCities2Data");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCities2Data");
 	g_DirtyFlag.CITIES2 = false;
 end
@@ -5510,7 +5097,7 @@ function Initialize()
 		function()
 			if not tUnitSort.parent then return; end
 			-- refresh data and re-sort group which upgraded unit was from
-			m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+			m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
 			UpdatePolicyData();
 			UpdateMinorData();
 			sort_units( tUnitSort.type, tUnitSort.group, tUnitSort.parent );

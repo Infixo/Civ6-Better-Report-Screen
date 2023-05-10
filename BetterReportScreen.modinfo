@@ -45,6 +45,15 @@
             <Items>
                 <File>reportscreen.lua</File>
 				<File>reportscreen.xml</File>
+				<File>BRSPage_Yields.lua</File>
+				<File>BRSPage_Resources.lua</File>
+				<File>BRSPage_CityStatus.lua</File>
+				<File>BRSPage_Gossip.lua</File>
+				<File>BRSPage_Deals.lua</File>
+				<File>BRSPage_Units.lua</File>
+				<File>BRSPage_Policy.lua</File>
+				<File>BRSPage_Minor.lua</File>
+				<File>BRSPage_Cities2.lua</File>
             </Items>
         </ImportFiles>
 		<UpdateText id="BRS_UpdateText">
@@ -124,6 +133,15 @@
 		<!-- Shared files -->
 		<File>BetterReportScreen_Database.sql</File>
         <File>reportscreen.lua</File>
+		<File>BRSPage_Yields.lua</File>
+		<File>BRSPage_Resources.lua</File>
+		<File>BRSPage_CityStatus.lua</File>
+		<File>BRSPage_Gossip.lua</File>
+		<File>BRSPage_Deals.lua</File>
+		<File>BRSPage_Units.lua</File>
+		<File>BRSPage_Policy.lua</File>
+		<File>BRSPage_Minor.lua</File>
+		<File>BRSPage_Cities2.lua</File>
 		<File>RealModifierAnalysis.lua</File>
 		<File>RealModifierAnalysis.xml</File>
 		<File>Text/BetterReportScreen_Text.xml</File>
