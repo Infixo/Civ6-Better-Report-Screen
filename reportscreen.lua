@@ -4,12 +4,12 @@ print("Loading ReportScreen.lua from Better Report Screen version "..GlobalParam
 --	All the data
 --  Copyright 2016-2018, Firaxis Games
 -- ===========================================================================
-include("CitySupport");
+include("CitySupport"); -- GetCityData big, 
 include("Civ6Common");
 include("InstanceManager");
-include("SupportFunctions");
+--include("SupportFunctions"); -- TruncateString in Policies, TruncateStringWithTooltip, Clamp in CitySupport, Round often, 
 include("TabSupport");
-include("LeaderIcon");
+include("LeaderIcon"); -- Used by Gossip page
 
 -- exposing functions and variables
 if not ExposedMembers.RMA then ExposedMembers.RMA = {} end;
@@ -143,6 +143,113 @@ g_AbilitiesUnits = {}; -- this is based on TypeTags table, so it is static
 
 
 -- ===========================================================================
+-- 230510 SupportFunctions: TruncateString, TruncateStringWithTooltip, Clamp, Round
+-- ===========================================================================
+
+-- ===========================================================================
+--	Round()
+--	Rounds a number to X decimal places.
+--	Original version from: http://lua-users.org/wiki/SimpleRound
+-- ===========================================================================
+function Round(num:number, idp:number)
+  local mult:number = 10^(idp or 0);
+  return math.floor(num * mult + 0.5) / mult;
+end
+
+-- ===========================================================================
+--	Clamp()
+--	Returns the value passed, only changing if it's above or below the min/max
+-- ===========================================================================
+function Clamp( value:number, min:number, max:number )
+	if value < min then 
+		return min;
+	elseif value > max then
+		return max;
+	else
+		return value;
+	end
+end
+
+-- ===========================================================================
+--	Sets a Label or control that contains a label (e.g., GridButton) with
+--	a string that, if necessary, will be truncated.
+--
+--	RETURNS: true if truncated.
+-- ===========================================================================
+function TruncateString(control, resultSize, longStr, trailingText)
+
+	local textControl = control;
+
+	-- Ensure this has the actual text control
+	if control.GetTextControl ~= nil then
+		textControl = control:GetTextControl();
+		UI.AssertMsg(textControl.SetTruncateWidth ~= nil, "Calling TruncateString with an unsupported control");
+	end
+
+	-- TODO if trailingText is ever used, add a way to do it to TextControl
+	UI.AssertMsg(trailingText == nil or trailingText == "", "trailingText is not supported");
+
+	if(longStr == nil) then
+		longStr = control:GetText();
+	end
+	
+	--TODO a better solution than this function would be ideal
+		--calling SetText implicitly truncates if the flag is set
+		--a AutoToolTip flag could be made to avoid setting the tooltip from lua
+		--trailingText could be added, right now its just an ellipsis but it could be arbitrary
+		--this would avoid the weird type shenanigans when truncating TextButtons, TextControls, etc
+
+	if textControl ~= nil then
+		textControl:SetTruncateWidth(resultSize);
+
+		if control.SetText ~= nil then
+			control:SetText(longStr);
+		else
+			textControl:SetText(longStr);
+		end
+	else
+		UI.AssertMsg(false, "Attempting to truncate a NIL control");
+	end
+
+	if textControl.IsTextTruncated ~= nil then
+		return textControl:IsTextTruncated();
+	else
+		UI.AssertMsg(false, "Calling IsTextTruncated with an unsupported control");
+		return true;
+	end
+end
+
+-- ===========================================================================
+--	Same as TruncateString(), but if truncation occurs automatically adds
+--	the full text as a tooltip.
+-- ===========================================================================
+function TruncateStringWithTooltip(control, resultSize, longStr, trailingText)
+	local isTruncated = TruncateString( control, resultSize, longStr, trailingText );
+	if isTruncated then
+		control:SetToolTipString( longStr );
+	else
+		control:SetToolTipString( nil );
+	end
+	return isTruncated;
+end
+
+-- ===========================================================================
+--	Same as TruncateStringWithTooltip(), but removes leading white space
+--	before truncation
+-- ===========================================================================
+function TruncateStringWithTooltipClean(control, resultSize, longStr, trailingText)
+	local cleanString = longStr:match("^%s*(.-)%s*$");
+	local isTruncated = TruncateString( control, resultSize, longStr, trailingText );
+	if isTruncated then
+		control:SetToolTipString( cleanString );
+	else
+		control:SetToolTipString( nil );
+	end
+	return isTruncated;
+end
+
+
+-- ===========================================================================
 -- Time helpers and debug routines
 -- ===========================================================================
 local fStartTime1:number = 0.0
@@ -220,6 +327,15 @@ end
 
 -- ===========================================================================
 --	Single entry point for display
+--	1: Yields		UpdateYieldsData		ViewYieldsPage
+--	2: Resources	UpdateResourcesData		ViewResourcesPage
+--	3: CityStatus	UpdateCityStatusData	ViewCityStatusPage
+--	4: Gossip		UpdateGossipData		ViewGossipPage
+--	5: Deals		UpdateDealsData			ViewDealsPage
+--	6: Units		UpdateUnitsData			ViewUnitsPage
+--	7: Policies		UpdatePolicyData		ViewPolicyPage
+--	8: Minors		UpdateMinorData			ViewMinorPage
+--	9: Cities2		UpdateCities2Data		ViewCities2Page
 -- ===========================================================================
 function Open( tabToOpen:number )
 	--print("FUN Open()", tabToOpen);
@@ -231,9 +347,16 @@ function Open( tabToOpen:number )
 
 	-- BRS !! new line to add new variables 
 	Timer2Start()
-	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	--m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	UpdateYieldsData();
+	UpdateResourcesData();
+	UpdateCityStatusData();
+	UpdateGossipData();
+	UpdateDealsData();
+	UpdateUnitsData();
 	UpdatePolicyData();
 	UpdateMinorData();
+	UpdateCities2Data();
 	Timer2Tick("GetData")
 	
 	-- To remember the last opened tab when the report is re-opened: ARISTOS
@@ -2105,8 +2228,13 @@ end
 
 
 -- ===========================================================================
---	Tab Callback
+--	YIELDS PAGE
 -- ===========================================================================
+
+function UpdateYieldsData()
+	print("UpdateYieldsData");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
 
 local populationToCultureScale:number = GameInfo.GlobalParameters["CULTURE_PERCENTAGE_YIELD_PER_POP"].Value / 100;
 local populationToScienceScale:number = GameInfo.GlobalParameters["SCIENCE_PERCENTAGE_YIELD_PER_POP"].Value / 100; -- Infixo added science per pop
@@ -2817,6 +2945,11 @@ end
 -- RESOURCES PAGE
 -- ===========================================================================
 
+function UpdateResourcesData()
+	print("UpdateResourcesData");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
+
 function ViewResourcesPage()	
 
 	ResetTabForNewPageContent();
@@ -3025,6 +3158,11 @@ end
 -- GOSSIP PAGE
 -- ===========================================================================
 
+function UpdateGossipData()
+	print("UpdateGossipData");
+	-- no data reading here, it reads all in ViewGossipPage
+end
+
 --	Tab Callback
 function ViewGossipPage()	
 	ResetTabForNewPageContent();
@@ -3198,6 +3336,11 @@ end
 -- ===========================================================================
 -- CITY STATUS PAGE
 -- ===========================================================================
+
+function UpdateCityStatusData()
+	print("UpdateCityStatusData");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
 
 function GetFontIconForDistrict(sDistrictType:string)
 	-- exceptions first
@@ -3704,6 +3847,11 @@ end
 -- ===========================================================================
 -- UNITS PAGE
 -- ===========================================================================
+
+function UpdateUnitsData()
+	print("UpdateUnitsData");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
 
 -- returns the name of the City that the unit is currently in, or ""
 function GetCityForUnit(pUnit:table)
@@ -4310,6 +4458,11 @@ end
 -- CURRENT DEALS PAGE
 -- ===========================================================================
 
+function UpdateDealsData()
+	print("UpdateDealsData");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
+
 function ViewDealsPage()
 
 	ResetTabForNewPageContent();
@@ -4424,7 +4577,7 @@ end
 
 
 function UpdatePolicyData()
-	--print("*** UPDATE POLICY DATA ***");
+	print("*** UPDATE POLICY DATA ***");
 	Timer1Start();
 	m_kPolicyData = {}; for slot,_ in pairs(tPolicyOrder) do m_kPolicyData[slot] = {}; end -- reset all data
 	local ePlayerID:number = Game.GetLocalPlayer();
@@ -4623,7 +4776,7 @@ function GetCityStateTrait(sLeaderType:string)
 end
 
 function UpdateMinorData()
-	--print("*** UPDATE MINOR DATA ***");
+	print("*** UPDATE MINOR DATA ***");
 	Timer1Start();
 
 	local tMinorBonuses:table = {}; -- helper table to quickly access bonuses
@@ -4868,6 +5021,11 @@ end
 -- ===========================================================================
 -- CITIES 2 PAGE - GATHERING STORM
 -- ===========================================================================
+
+function UpdateCities2Data()
+	print("UpdateCities2Data");
+	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+end
 
 -- helpers
 
