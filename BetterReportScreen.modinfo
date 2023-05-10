@@ -43,8 +43,8 @@
                 <LoadOrder>1000</LoadOrder>
             </Properties>		
             <Items>
-                <File>ReportScreen.lua</File>
-				<File>ReportScreen.xml</File>
+                <File>reportscreen.lua</File>
+				<File>reportscreen.xml</File>
             </Items>
         </ImportFiles>
 		<UpdateText id="BRS_UpdateText">
@@ -68,14 +68,14 @@
                 <LoadOrder>1010</LoadOrder>
             </Properties>		
             <Items>
-				<File>RiseFall/ReportScreen.xml</File>
+				<File>RiseFall/reportscreen.xml</File>
             </Items>
         </ImportFiles>
 		<ReplaceUIScript id="BRS_ReplaceUI_ReportScreen_XP1" criteria="Expansion1">
 			<Properties>
                 <LoadOrder>1010</LoadOrder>
-				<LuaContext>ReportScreen</LuaContext>
-				<LuaReplace>ReportScreen.lua</LuaReplace>
+				<LuaContext>reportscreen</LuaContext>
+				<LuaReplace>reportscreen.lua</LuaReplace>
 			</Properties>
 		</ReplaceUIScript>
 		<!-- Gathering Storm actions - replace lua and import xml (there's no 'replace' for xml) -->
@@ -84,14 +84,14 @@
                 <LoadOrder>1020</LoadOrder>
             </Properties>		
             <Items>
-				<File>RiseFall/ReportScreen.xml</File> <!-- no layout changes in GS -->
+				<File>RiseFall/reportscreen.xml</File> <!-- no layout changes in GS -->
             </Items>
         </ImportFiles>
 		<ReplaceUIScript id="BRS_ReplaceUI_ReportScreen_XP2" criteria="Expansion2">
 			<Properties>
                 <LoadOrder>1020</LoadOrder>
 				<LuaContext>ReportScreen</LuaContext>
-				<LuaReplace>ReportScreen.lua</LuaReplace> <!-- we'll try to use the same file -->
+				<LuaReplace>reportscreen.lua</LuaReplace> <!-- we'll try to use the same file -->
 			</Properties>
 		</ReplaceUIScript>
 		<!-- new font icons -->
@@ -123,7 +123,7 @@
 		<File>Config/BRS_Config_Text.xml</File>
 		<!-- Shared files -->
 		<File>BetterReportScreen_Database.sql</File>
-        <File>ReportScreen.lua</File>
+        <File>reportscreen.lua</File>
 		<File>RealModifierAnalysis.lua</File>
 		<File>RealModifierAnalysis.xml</File>
 		<File>Text/BetterReportScreen_Text.xml</File>
@@ -139,9 +139,9 @@
 		<File>Text/BetterReportScreen_Text_zh_Hans_CN.xml</File>
 		<File>Text/BetterReportScreen_Text_zh_Hant_HK.xml</File>
 		<!-- Vanilla files -->
-		<File>ReportScreen.xml</File>
+		<File>reportscreen.xml</File>
 		<!-- Rise & Fall files -->
-		<File>RiseFall/ReportScreen.xml</File>
+		<File>RiseFall/reportscreen.xml</File>
 		<!-- new font icons -->
 		<File>Icons/FontIconsRMI.dds</File>
 		<File>Icons/FontIconsRMI.xml</File>
