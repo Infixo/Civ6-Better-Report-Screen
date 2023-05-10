@@ -252,21 +252,24 @@ end
 -- ===========================================================================
 -- Time helpers and debug routines
 -- ===========================================================================
-local fStartTime1:number = 0.0
-local fStartTime2:number = 0.0
+
+local MILISECS_PER_TICK: number = 10000;
+local m_StartTime1: number = 0;
+local m_StartTime2: number = 0;
+
 function Timer1Start()
-	fStartTime1 = Automation.GetTime()
+	m_StartTime1 = GetTickCount(); -- Automation.GetTime()
 	--print("Timer1 Start", fStartTime1)
 end
 function Timer2Start()
-	fStartTime2 = Automation.GetTime()
+	m_StartTime2 = GetTickCount(); -- Automation.GetTime()
 	--print("Timer2 Start() (start)", fStartTime2)
 end
 function Timer1Tick(txt:string)
-	print("Timer1 Tick", txt, string.format("%5.3f", Automation.GetTime()-fStartTime1))
+	print("Timer1:", txt, math.floor( (GetTickCount()-m_StartTime1)/MILISECS_PER_TICK ), "milisecs");
 end
 function Timer2Tick(txt:string)
-	print("Timer2 Tick", txt, string.format("%5.3f", Automation.GetTime()-fStartTime2))
+	print("Timer2:", txt, math.floor( (GetTickCount()-m_StartTime2)/MILISECS_PER_TICK ), "milisecs");
 end
 
 -- debug routine - prints a table (no recursion)
@@ -2233,7 +2236,9 @@ end
 
 function UpdateYieldsData()
 	print("UpdateYieldsData");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateYieldsData");
 end
 
 local populationToCultureScale:number = GameInfo.GlobalParameters["CULTURE_PERCENTAGE_YIELD_PER_POP"].Value / 100;
@@ -2947,7 +2952,9 @@ end
 
 function UpdateResourcesData()
 	print("UpdateResourcesData");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateResourcesData");
 end
 
 function ViewResourcesPage()	
@@ -3164,7 +3171,8 @@ function UpdateGossipData()
 end
 
 --	Tab Callback
-function ViewGossipPage()	
+function ViewGossipPage()
+	Timer1Start();
 	ResetTabForNewPageContent();
 	local playerID:number = Game.GetLocalPlayer();
 	if playerID == -1 then
@@ -3310,6 +3318,7 @@ function ViewGossipPage()
 	Controls.Scroll:SetSizeY( Controls.Main:GetSizeY() - SIZE_HEIGHT_PADDING_BOTTOM_ADJUST );
 	-- Remember this tab when report is next opened: ARISTOS
 	m_kCurrentTab = 4;
+	Timer1Tick("ViewGossipPage");
 end
 
 --	Filter Callbacks
@@ -3339,7 +3348,9 @@ end
 
 function UpdateCityStatusData()
 	print("UpdateCityStatusData");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateCityStatusData");
 end
 
 function GetFontIconForDistrict(sDistrictType:string)
@@ -3850,7 +3861,9 @@ end
 
 function UpdateUnitsData()
 	print("UpdateUnitsData");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateUnitsData");
 end
 
 -- returns the name of the City that the unit is currently in, or ""
@@ -4460,7 +4473,9 @@ end
 
 function UpdateDealsData()
 	print("UpdateDealsData");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateDealsData");
 end
 
 function ViewDealsPage()
@@ -4577,7 +4592,7 @@ end
 
 
 function UpdatePolicyData()
-	print("*** UPDATE POLICY DATA ***");
+	print("UpdatePolicyData");
 	Timer1Start();
 	m_kPolicyData = {}; for slot,_ in pairs(tPolicyOrder) do m_kPolicyData[slot] = {}; end -- reset all data
 	local ePlayerID:number = Game.GetLocalPlayer();
@@ -4636,7 +4651,7 @@ function UpdatePolicyData()
 			for _,value in pairs(policyData.Yields) do if value ~= 0 then policyData.IsImpact = true; break; end end
 		end -- pantheons
 	end -- all beliefs
-	Timer1Tick("--- ALL POLICY DATA ---");
+	Timer1Tick("UpdatePolicyData");
 	--for policyGroup,policies in pairs(m_kPolicyData) do print(policyGroup, table.count(policies)); end
 end
 
@@ -4776,7 +4791,7 @@ function GetCityStateTrait(sLeaderType:string)
 end
 
 function UpdateMinorData()
-	print("*** UPDATE MINOR DATA ***");
+	print("UpdateMinorData");
 	Timer1Start();
 
 	local tMinorBonuses:table = {}; -- helper table to quickly access bonuses
@@ -4915,7 +4930,7 @@ function UpdateMinorData()
 		end -- level City State
 	end -- all civs
 
-	Timer1Tick("--- ALL MINOR DATA ---");
+	Timer1Tick("UpdateMinorData");
 	--dshowrectable(m_kMinorData);
 end
 
@@ -5024,7 +5039,9 @@ end
 
 function UpdateCities2Data()
 	print("UpdateCities2Data");
+	Timer1Start();
 	m_kCityData, m_kCityTotalData, m_kResourceData, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	Timer1Tick("UpdateCities2Data");
 end
 
 -- helpers
