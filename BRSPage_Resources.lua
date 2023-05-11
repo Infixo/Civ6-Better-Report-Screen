@@ -515,4 +515,42 @@ function ViewResourcesPage()
 	m_kCurrentTab = 2;
 end
 
+-- ===========================================================================
+-- CHECKBOXES
+-- ===========================================================================
+
+-- Checkboxes for different resources in Resources tab
+
+function OnToggleStrategic()
+	local isChecked = Controls.StrategicCheckbox:IsSelected();
+	Controls.StrategicCheckbox:SetSelected( not isChecked );
+	ViewResourcesPage();
+end
+
+function OnToggleLuxury()
+	local isChecked = Controls.LuxuryCheckbox:IsSelected();
+	Controls.LuxuryCheckbox:SetSelected( not isChecked );
+	ViewResourcesPage();
+end
+
+function OnToggleBonus()
+	local isChecked = Controls.BonusCheckbox:IsSelected();
+	Controls.BonusCheckbox:SetSelected( not isChecked );
+	ViewResourcesPage();
+end
+
+-- ===========================================================================
+function InitializeResources()
+	--ARISTOS: Resources toggle
+	Controls.LuxuryCheckbox:RegisterCallback( Mouse.eLClick, OnToggleLuxury );
+	Controls.LuxuryCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.LuxuryCheckbox:SetSelected( true );
+	Controls.StrategicCheckbox:RegisterCallback( Mouse.eLClick, OnToggleStrategic );
+	Controls.StrategicCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.StrategicCheckbox:SetSelected( true );
+	Controls.BonusCheckbox:RegisterCallback( Mouse.eLClick, OnToggleBonus );
+	Controls.BonusCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.BonusCheckbox:SetSelected( false ); -- not so important
+end
+
 print("BRS: Loaded file BRSPage_Resources.lua");

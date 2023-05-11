@@ -214,4 +214,33 @@ function ViewPolicyPage()
 	m_kCurrentTab = 7;
 end
 
+-- ===========================================================================
+-- CHECKBOXES
+-- ===========================================================================
+
+-- Checkboxes for policy filters
+
+function OnToggleInactivePolicies()
+	local isChecked = Controls.HideInactivePoliciesCheckbox:IsSelected();
+	Controls.HideInactivePoliciesCheckbox:SetSelected( not isChecked );
+	ViewPolicyPage();
+end
+
+function OnToggleNoImpactPolicies()
+	local isChecked = Controls.HideNoImpactPoliciesCheckbox:IsSelected();
+	Controls.HideNoImpactPoliciesCheckbox:SetSelected( not isChecked );
+	ViewPolicyPage();
+end
+
+-- ===========================================================================
+function InitializePolicy()
+	-- Polices Filters
+	Controls.HideInactivePoliciesCheckbox:RegisterCallback( Mouse.eLClick, OnToggleInactivePolicies );
+	Controls.HideInactivePoliciesCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.HideInactivePoliciesCheckbox:SetSelected( true );
+	Controls.HideNoImpactPoliciesCheckbox:RegisterCallback( Mouse.eLClick, OnToggleNoImpactPolicies );
+	Controls.HideNoImpactPoliciesCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.HideNoImpactPoliciesCheckbox:SetSelected( false );
+end
+
 print("BRS: Loaded file BRSPage_Policy.lua");

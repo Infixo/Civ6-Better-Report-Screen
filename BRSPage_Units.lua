@@ -56,7 +56,7 @@ function GetDataUnits()
 		end
 		-- tweak to handle new, unknown formation classes
 		if not m_kSupportedFormationClasses[formationClass] then
-			print("WARNING: GetData Unknown formation class", formationClass, "for unit", unitInfo.UnitType);
+			print("WARNING: GetDataUnits Unknown formation class", formationClass, "for unit", unitInfo.UnitType);
 			group_name = "SUPPORT";
 		end
 		-- store for Units tab report

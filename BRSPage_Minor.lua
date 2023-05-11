@@ -278,4 +278,33 @@ function ViewMinorPage()
 	m_kCurrentTab = 8;
 end
 
+-- ===========================================================================
+-- CHECKBOXES
+-- ===========================================================================
+
+-- Checkboxes for minors filters
+
+function OnToggleNotMetMinors()
+	local isChecked = Controls.HideNotMetMinorsCheckbox:IsSelected();
+	Controls.HideNotMetMinorsCheckbox:SetSelected( not isChecked );
+	ViewMinorPage();
+end
+
+function OnToggleNoImpactMinors()
+	local isChecked = Controls.HideNoImpactMinorsCheckbox:IsSelected();
+	Controls.HideNoImpactMinorsCheckbox:SetSelected( not isChecked );
+	ViewMinorPage();
+end
+
+-- ===========================================================================
+function InitializeMinor()
+	-- Minors Filters
+	Controls.HideNotMetMinorsCheckbox:RegisterCallback( Mouse.eLClick, OnToggleNotMetMinors );
+	Controls.HideNotMetMinorsCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.HideNotMetMinorsCheckbox:SetSelected( true );
+	Controls.HideNoImpactMinorsCheckbox:RegisterCallback( Mouse.eLClick, OnToggleNoImpactMinors );
+	Controls.HideNoImpactMinorsCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end );
+	Controls.HideNoImpactMinorsCheckbox:SetSelected( false );
+end
+
 print("BRS: Loaded file BRSPage_Minor.lua");

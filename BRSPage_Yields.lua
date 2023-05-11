@@ -64,7 +64,7 @@ function GetDataYields()
 	-- .OwnerType, .OwnerName - strings, as returned by GameEffects.GetObjectType and GetObjectName - for debug
 	-- .Modifier - static as returned by RMA.FetchAndCacheData
 	-----------------------------------
-	--print("FUN GetData() - modifiers");
+	--print("GetDataYields: modifiers");
 	m_kModifiers = {}; -- clear main table
 	local sTrackedPlayer:string = PlayerConfigurations[playerID]:GetLeaderName(); -- LOC_LEADER_xxx_NAME
 	--print("Tracking player", sTrackedPlayer); -- debug
@@ -75,6 +75,7 @@ function GetDataYields()
 		m_kModifiers[ city:GetName() ] = {}; -- we need al least empty table for each city
 	end
 	--for k,v in pairs(tTrackedOwners) do print(k,v); end -- debug
+	
 	-- main loop
 	for _,instID in ipairs(GameEffects.GetModifiers()) do
 		local iOwnerID:number = GameEffects.GetModifierOwner( instID );
@@ -103,7 +104,7 @@ function GetDataYields()
 			-- fix for sudden changes in modifier system, like Veterancy changed in March 2018 patch
 			-- some modifiers might be removed, but still are attached to objects from old games
 			-- the game itself seems to be resistant to such situation
-			if data.Modifier == nil then print("WARNING! GetData/Modifiers: Ignoring non-existing modifier", data.ID, data.Definition.Id, sOwnerName, sSubjectName); return end
+			if data.Modifier == nil then print("WARNING! GetDataYields/Modifiers: Ignoring non-existing modifier", data.ID, data.Definition.Id, sOwnerName, sSubjectName); return end
 			if sSubjectType == nil or sSubjectName == nil then
 				data.SubjectType = nil;
 				data.SubjectName = nil;
@@ -165,14 +166,13 @@ function GetDataYields()
 	--print("--------------"); print("FOUND MODIFIERS FOR CITIES"); for k,v in pairs(m_kModifiers) do print(k, #v); end
 
 	-- =================================================================
-	--print("FUN GetData() - cities");
-	local pCities = player:GetCities();
-	for i, pCity in pCities:Members() do	
-		local cityName	:string = pCity:GetName();
+	--print("GetDataYields: cities");
+	for _,pCity in player:GetCities():Members() do
+		local cityName: string = pCity:GetName();
 			
 		-- Big calls, obtain city data and add report specific fields to it.
 		local data		:table	= GetCityData( pCity );
-		data.Resources			= GetCityResourceData( pCity ); -- Add more data (not in CitySupport)			
+		--data.Resources			= GetCityResourceData( pCity ); -- Add more data (not in CitySupport)			
 		data.WorkedTileYields, data.NumWorkedTiles, data.SpecialistYields, data.NumSpecialists = GetWorkedTileYieldData( pCity, pCulture );	-- Add more data (not in CitySupport)
 
 		-- Add to totals.
@@ -318,9 +318,6 @@ function GetDataYields()
 		end	
 		
 		data.TotalFoodSurplusToolTip = table.concat(tGrowthTT, "[NEWLINE]");
-
-		-- Gathering Storm
-		--if bIsGatheringStorm then AppendXP2CityData(data); end
 	
 	end -- for Cities:Members
 
@@ -339,7 +336,7 @@ function GetDataYields()
 
 	-- =================================================================
 	-- Units (TODO: Group units by promotion class and determine total maintenance cost)
-	--print("FUN GetData() - units");
+	--print("GetDataYields: units");
 	local MaintenanceDiscountPerUnit:number = pTreasury:GetMaintDiscountPerUnit();
 	for i, pUnit in pUnits:Members() do
 		local pUnitInfo:table = GameInfo.Units[pUnit:GetUnitType()];
@@ -583,6 +580,7 @@ function GetWorkedTileYieldData( pCity:table, pCulture:table )
 	return kYields, iNumWorkedPlots, kSpecYields, iNumSpecialists;
 end
 
+-- ===========================================================================
 function UpdateYieldsData()
 	print("UpdateYieldsData");
 	Timer1Start();
@@ -591,8 +589,7 @@ function UpdateYieldsData()
 	g_DirtyFlag.YIELDS = false;
 end
 
---BRS !! sort features for income
-
+-- ===========================================================================
 local sortCities : table = { by = "CityName", descend = false }
 
 local function sortByCities( name )
@@ -607,7 +604,6 @@ local function sortByCities( name )
 end
 
 local function sortFunction( t, a, b )
-
 	if sortCities.by == "TourismPerTurn" then
 		if sortCities.descend then
 			return t[b].WorkedTileYields["TOURISM"] < t[a].WorkedTileYields["TOURISM"]
@@ -621,7 +617,6 @@ local function sortFunction( t, a, b )
 			return t[b][sortCities.by] > t[a][sortCities.by]
 		end
 	end
-
 end
 
 local populationToCultureScale:number = GameInfo.GlobalParameters["CULTURE_PERCENTAGE_YIELD_PER_POP"].Value / 100;
@@ -1330,6 +1325,44 @@ function ViewYieldsPage()
 	Controls.Scroll:SetSizeY( Controls.Main:GetSizeY() - (Controls.BottomYieldTotals:GetSizeY() + SIZE_HEIGHT_PADDING_BOTTOM_ADJUST ) );	
 	-- Remember this tab when report is next opened: ARISTOS
 	m_kCurrentTab = 1;
+end
+
+-- ===========================================================================
+-- CHECKBOXES
+-- ===========================================================================
+
+-- Checkboxes for hiding city details and free units/buildings
+
+function OnToggleHideCityBuildings()
+	local isChecked = Controls.HideCityBuildingsCheckbox:IsSelected();
+	Controls.HideCityBuildingsCheckbox:SetSelected( not isChecked );
+	ViewYieldsPage()
+end
+
+function OnToggleHideFreeBuildings()
+	local isChecked = Controls.HideFreeBuildingsCheckbox:IsSelected();
+	Controls.HideFreeBuildingsCheckbox:SetSelected( not isChecked );
+	ViewYieldsPage()
+end
+
+function OnToggleHideFreeUnits()
+	local isChecked = Controls.HideFreeUnitsCheckbox:IsSelected();
+	Controls.HideFreeUnitsCheckbox:SetSelected( not isChecked );
+	ViewYieldsPage()
+end
+
+-- ===========================================================================
+function InitializeYields()
+	--BRS Yields tab toggle
+	Controls.HideCityBuildingsCheckbox:RegisterCallback( Mouse.eLClick, OnToggleHideCityBuildings )
+	Controls.HideCityBuildingsCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end )
+	Controls.HideCityBuildingsCheckbox:SetSelected( true );
+	Controls.HideFreeBuildingsCheckbox:RegisterCallback( Mouse.eLClick, OnToggleHideFreeBuildings )
+	Controls.HideFreeBuildingsCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end )
+	Controls.HideFreeBuildingsCheckbox:SetSelected( true );
+	Controls.HideFreeUnitsCheckbox:RegisterCallback( Mouse.eLClick, OnToggleHideFreeUnits )
+	Controls.HideFreeUnitsCheckbox:RegisterCallback( Mouse.eMouseEnter, function() UI.PlaySound("Main_Menu_Mouse_Over"); end )
+	Controls.HideFreeUnitsCheckbox:SetSelected( true );
 end
 
 print("BRS: Loaded file BRSPage_Yields.lua");
