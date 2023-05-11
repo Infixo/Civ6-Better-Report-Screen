@@ -40,6 +40,7 @@ function GetDataUnits()
 	local group_name:string;
 	local tUnitsDist:table = {}; -- temp table for calculating units' distance from cities
 
+	--Timer2Start();
 	for _, unit in pUnits:Members() do
 		--print("unit", unit:GetID());
 		local unitInfo:table = GameInfo.Units[unit:GetUnitType()];
@@ -102,10 +103,12 @@ function GetDataUnits()
 		end
 		table.insert( tUnitsDist, unit );
 	end
+	--Timer2Tick("GetDataUnits: main loop"); -- insignificant
 	
 	-- calculate distance to the closest city for all units
 	-- must iterate through all living players and their cities
 	--print("GetDataUnits: calculate distance");
+	--Timer2Start();
 	for _,player in ipairs(PlayerManager.GetAlive()) do
 		local bIsOurs:boolean = ( player:GetID() == playerID );
 		for _,city in player:GetCities():Members() do
@@ -123,7 +126,8 @@ function GetDataUnits()
 			end
 		end
 	end
-
+	--Timer2Tick("GetDataUnits: distance"); -- insignificant
+	
 	-----------------------------------
 	-- MODIFIERS
 	-- scan only once, select those for a) player's cities b) with desired effects
@@ -137,8 +141,8 @@ function GetDataUnits()
 	-- .Modifier - static as returned by RMA.FetchAndCacheData
 	-----------------------------------
 	--print("GetDataUnits: modifiers");
+	--Timer2Start();
 	m_kModifiersUnits ={}; -- clear main table
-	local sTrackedPlayer:string = PlayerConfigurations[playerID]:GetLeaderName(); -- LOC_LEADER_xxx_NAME
 	local tTrackedUnits:table = {};
 	for _,unit in player:GetUnits():Members() do
 		tTrackedUnits[ unit:GetID() ] = true;
@@ -148,26 +152,27 @@ function GetDataUnits()
 	-- main loop
 	for _,instID in ipairs(GameEffects.GetModifiers()) do
 		local iOwnerID:number = GameEffects.GetModifierOwner( instID );
-		local iPlayerID:number = GameEffects.GetObjectsPlayerId( iOwnerID );
+		--local iPlayerID:number = GameEffects.GetObjectsPlayerId( iOwnerID );
 		local sOwnerType:string = GameEffects.GetObjectType( iOwnerID ); -- LOC_MODIFIER_OBJECT_CITY, LOC_MODIFIER_OBJECT_PLAYER, LOC_MODIFIER_OBJECT_GOVERNOR
 		local sOwnerName:string = GameEffects.GetObjectName( iOwnerID ); -- LOC_CITY_xxx_NAME, LOC_LEADER_xxx_NAME, etc.
 		local tSubjects:table = GameEffects.GetModifierSubjects( instID ); -- table of objectIDs or nil
 		--print("checking", instID, sOwnerName, sOwnerType, iOwnerID, iPlayerID); -- debug
 		
-		local instdef:table = GameEffects.GetModifierDefinition(instID);
-		local data:table = {
-			ID = instID,
-			Active = GameEffects.GetModifierActive(instID), -- should always be true? but check to be safe
-			Definition = instdef, -- .Id has the static name
-			Arguments = instdef.Arguments, -- same structure as static, Name = Value
-			OwnerType = sOwnerType,
-			OwnerName = sOwnerName,
-			SubjectType = nil, -- will be filled for modifiers taken from Subjects
-			SubjectName = nil, -- will be filled for modifiers taken from Subjects
-			UnitID = nil, -- will be used only for units' modifiers
-			Modifier = RMA.FetchAndCacheData(instdef.Id),
-		};
 		local function RegisterModifierForUnit(iUnitID:number, sSubjectType:string, sSubjectName:string)
+			-- 230511 allocate memory only when registering
+			local instdef:table = GameEffects.GetModifierDefinition(instID);
+			local data:table = {
+				ID = instID,
+				Active = GameEffects.GetModifierActive(instID), -- should always be true? but check to be safe
+				Definition = instdef, -- .Id has the static name
+				Arguments = instdef.Arguments, -- same structure as static, Name = Value
+				OwnerType = sOwnerType,
+				OwnerName = sOwnerName,
+				SubjectType = nil, -- will be filled for modifiers taken from Subjects
+				SubjectName = nil, -- will be filled for modifiers taken from Subjects
+				UnitID = nil, -- will be used only for units' modifiers
+				Modifier = RMA.FetchAndCacheData(instdef.Id),
+			};
 			--print("registering for unit", iUnitID, data.ID, sSubjectType, sSubjectName);
 			-- fix for sudden changes in modifier system, like Veterancy changed in March 2018 patch
 			-- some modifiers might be removed, but still are attached to objects from old games
@@ -206,37 +211,53 @@ function GetDataUnits()
 			--for k,v in pairs(data.Arguments) do print(k,v); end -- debug
 		end
 		
+		-- this part is for units as subjects; to make it more unified it will simply analyze all subjects' sets
+		if tSubjects then
+			for _,subjectID in ipairs(tSubjects) do
+				-- 230511 check if ours at all
+				if GameEffects.GetObjectsPlayerId(subjectID) == playerID then
+					local sSubjectType:string = GameEffects.GetObjectType( subjectID );
+					local sSubjectName:string = GameEffects.GetObjectName( subjectID );
+					if sSubjectType == "LOC_MODIFIER_OBJECT_UNIT" then
+						-- find a unit
+						local sSubjectString:string = GameEffects.GetObjectString( subjectID );
+						local iUnitID:number      = tonumber( string.match(sSubjectString, "Unit: (%d+)") );
+						local iUnitOwnerID:number = tonumber( string.match(sSubjectString, "Owner: (%d+)") );
+						--print("unit:", sSubjectString, "decode:", iUnitOwnerID, iUnitID);
+						if iUnitID and iUnitOwnerID and iUnitOwnerID == playerID and tTrackedUnits[iUnitID] then
+							RegisterModifierForUnit(iUnitID, sSubjectType, sSubjectName);
+						end
+					end -- if unit
+				end -- if ours
+			end -- subjects
+		end
+		
+		-- 230511 Units very often (always?) have itself as a subject, so it is more prudent to first check
+		-- subjects and then only add those modifiers that are new; otherwise there will be duplicates as 
+		-- the same modifiers will be registered from owner check and then subject check
 		-- this part is for units as owners, we need to decode the unit and see if it's ours
-		if sOwnerType == "LOC_MODIFIER_OBJECT_UNIT" then
+		
+		local function IsRegistered(iUnitID: number)
+			if not m_kModifiersUnits[iUnitID] then return false; end
+			for _,mod in ipairs( m_kModifiersUnits[iUnitID] ) do
+				if mod.ID == instID then return true; end
+			end
+			return false;
+		end
+		
+		if GameEffects.GetObjectsPlayerId(iOwnerID) == playerID and sOwnerType == "LOC_MODIFIER_OBJECT_UNIT" then
 			-- find a unit
 			local sOwnerString:string = GameEffects.GetObjectString( iOwnerID );
 			local iUnitID:number      = tonumber( string.match(sOwnerString, "Unit: (%d+)") );
 			local iUnitOwnerID:number = tonumber( string.match(sOwnerString, "Owner: (%d+)") );
 			--print("unit:", sOwnerString, "decode:", iUnitOwnerID, iUnitID);
-			if iUnitID and iUnitOwnerID and iUnitOwnerID == playerID and tTrackedUnits[iUnitID] then
+			if iUnitID and iUnitOwnerID and iUnitOwnerID == playerID and tTrackedUnits[iUnitID] and not IsRegistered(iUnitID) then
 				RegisterModifierForUnit(iUnitID);
 			end
 		end
 		
-		-- this part is for units as subjects; to make it more unified it will simply analyze all subjects' sets
-		if tSubjects then
-			for _,subjectID in ipairs(tSubjects) do
-				local sSubjectType:string = GameEffects.GetObjectType( subjectID );
-				local sSubjectName:string = GameEffects.GetObjectName( subjectID );
-				if sSubjectType == "LOC_MODIFIER_OBJECT_UNIT" then
-					-- find a unit
-					local sSubjectString:string = GameEffects.GetObjectString( subjectID );
-					local iUnitID:number      = tonumber( string.match(sSubjectString, "Unit: (%d+)") );
-					local iUnitOwnerID:number = tonumber( string.match(sSubjectString, "Owner: (%d+)") );
-					--print("unit:", sSubjectString, "decode:", iUnitOwnerID, iUnitID);
-					if iUnitID and iUnitOwnerID and iUnitOwnerID == playerID and tTrackedUnits[iUnitID] then
-						RegisterModifierForUnit(iUnitID, sSubjectType, sSubjectName);
-					end
-				end -- unit
-			end -- subjects
-		end
-		
 	end
+	--Timer2Tick("GetDataUnits: modifiers"); -- this part takes like 95% of the entire function, approx. 60 milisecs to process 10000 modifiers
 	--print("--------------"); print("FOUND MODIFIERS FOR UNITS"); for k,v in pairs(m_kModifiersUnits) do print(k, #v); end
 
 	return kUnitDataReport;
@@ -510,19 +531,21 @@ function group_military( unit, unitInstance, group, parent, type )
 	end
 	-- this section might grow!
 	local tUnitModifiers:table = m_kModifiersUnits[ unit:GetID() ];
+	--local isDebug: boolean = (unit:GetID() == 8781824); -- debug, will show only a specific unit
 	local tMod:table = nil;
 	local sText:string = "";
 	if table.count(tUnitModifiers) > 0 then table.insert(tPromoTT, TOOLTIP_SEP); end
 	local iPromoNum:number = 0;
-	local tExtraTT:table = {};
+	--local tExtraTT:table = {};
 	for _,mod in ipairs(tUnitModifiers) do
+		--if isDebug then dshowrectable(mod); end
 		local function AddExtraPromoText(sText:string)
-			--print("AddExtraPromoText", mod.OwnerName, mod.Modifier.ModifierId, sText);
+			--if isDebug then print("AddExtraPromoText", mod.OwnerName, mod.Modifier.ModifierId, sText); end
 			local sExtra:string = Locale.Lookup(mod.OwnerName).." ("..RMA.GetObjectNameForModifier(mod.Modifier.ModifierId)..") "..sText;
-			for _,txt in ipairs(tExtraTT) do if txt == sExtra then return; end end -- check if already added, do not add duplicates
+			--for _,txt in ipairs(tExtraTT) do if txt == sExtra then return; end end -- check if already added, do not add duplicates -- 230511 buggy, as e.g. armory and military xp bonus produce the same string
 			iPromoNum = iPromoNum + 1;
 			table.insert(tPromoTT, tonumber(iPromoNum)..". "..sExtra);
-			table.insert(tExtraTT, sExtra);
+			--table.insert(tExtraTT, sExtra);
 		end
 		tMod = mod.Modifier;
 		sText = ""; if tMod.Text then sText = Locale.Lookup(tMod.Text); end
