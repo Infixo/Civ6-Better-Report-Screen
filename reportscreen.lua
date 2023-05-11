@@ -113,14 +113,13 @@ m_kCityData = nil;
 m_tabs = nil;
 local m_kCityTotalData		:table = nil;
 local m_kUnitData			:table = nil;	-- TODO: Show units by promotion class
-local m_kDealData			:table = nil;
+local m_kDealData			:table = nil; -- diplomatic deals expenses displayed in the Yields page
 local m_uiGroups			:table = nil;	-- Track the groups on-screen for collapse all action.
 
 local m_isCollapsing		:boolean = true;
 
 
 --BRS !! new variables
-local m_kCurrentDeals	:table = nil;
 local m_kUnitDataReport	:table = nil;
 local m_kPolicyData		:table = nil;
 local m_kMinorData		:table = nil;
@@ -2040,7 +2039,7 @@ include("BRSPage_Yields");
 function UpdateYieldsData()
 	print("UpdateYieldsData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, _, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateYieldsData");
 	g_DirtyFlag.YIELDS = false;
 end
@@ -2771,7 +2770,7 @@ include("BRSPage_CityStatus");
 function UpdateCityStatusData()
 	print("UpdateCityStatusData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, _, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCityStatusData");
 	g_DirtyFlag.CITYSTATUS = false;
 end
@@ -3289,7 +3288,7 @@ include("BRSPage_Units");
 function UpdateUnitsData()
 	print("UpdateUnitsData");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, _, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateUnitsData");
 	g_DirtyFlag.UNITS = false;
 end
@@ -3903,88 +3902,6 @@ end
 -- ===========================================================================
 include("BRSPage_Deals");
 
-function UpdateDealsData()
-	print("UpdateDealsData");
-	Timer1Start();
-	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
-	Timer1Tick("UpdateDealsData");
-	g_DirtyFlag.DEALS = false;
-end
-
-function ViewDealsPage()
-	print("ViewDealsPage");
-	
-	if g_DirtyFlag.DEALS then UpdateDealsData(); end
-
-	ResetTabForNewPageContent();
-	
-	for j, pDeal in spairs( m_kCurrentDeals, function( t, a, b ) return t[b].EndTurn > t[a].EndTurn end ) do
-		--print("deal", pDeal.EndTurn, Game.GetCurrentGameTurn(), pDeal.EndTurn-Game.GetCurrentGameTurn());
-		local iNumTurns:number = pDeal.EndTurn - Game.GetCurrentGameTurn();
-		--local turns = "turns"
-		--if ending == 1 then turns = "turn" end
-
-		local instance : table = NewCollapsibleGroupInstance()
-
-		instance.RowHeaderButton:SetText( Locale.Lookup("LOC_HUD_REPORTS_TRADE_DEAL_WITH")..pDeal.WithCivilization );
-		instance.RowHeaderLabel:SetText( tostring(iNumTurns).." "..Locale.Lookup("LOC_HUD_REPORTS_TURNS_UNTIL_COMPLETED", iNumTurns).." ("..tostring(pDeal.EndTurn)..")" );
-		instance.RowHeaderLabel:SetHide( false );
-		instance.AmenitiesContainer:SetHide(true);
-        instance.IndustryContainer:SetHide(true); -- 2021-05-21
-        instance.MonopolyContainer:SetHide(true); -- 2021-05-21
-
-		local dealHeaderInstance : table = {}
-		ContextPtr:BuildInstanceForControl( "DealsHeader", dealHeaderInstance, instance.ContentStack )
-
-		local iSlots = #pDeal.Sending
-
-		if iSlots < #pDeal.Receiving then iSlots = #pDeal.Receiving end
-
-		for i = 1, iSlots do
-			local dealInstance : table = {}
-			ContextPtr:BuildInstanceForControl( "DealsInstance", dealInstance, instance.ContentStack )
-			table.insert( instance.Children, dealInstance )
-		end
-
-		for i, pDealItem in pairs( pDeal.Sending ) do
-			if pDealItem.Icon then
-				instance.Children[i].Outgoing:SetText( pDealItem.Icon .. " " .. pDealItem.Name )
-			else
-				instance.Children[i].Outgoing:SetText( pDealItem.Name )
-			end
-		end
-
-		for i, pDealItem in pairs( pDeal.Receiving ) do
-			if pDealItem.Icon then
-				instance.Children[i].Incoming:SetText( pDealItem.Icon .. " " .. pDealItem.Name )
-			else
-				instance.Children[i].Incoming:SetText( pDealItem.Name )
-			end
-		end
-	
-		local pFooterInstance:table = {}
-		ContextPtr:BuildInstanceForControl( "DealsFooterInstance", pFooterInstance, instance.ContentStack )
-		pFooterInstance.Outgoing:SetText( Locale.Lookup("LOC_HUD_REPORTS_TOTALS")..#pDeal.Sending )
-		pFooterInstance.Incoming:SetText( Locale.Lookup("LOC_HUD_REPORTS_TOTALS")..#pDeal.Receiving )
-	
-		SetGroupCollapsePadding( instance, pFooterInstance.Top:GetSizeY() )
-		RealizeGroup( instance );
-	end
-
-	Controls.Stack:CalculateSize();
-	Controls.Scroll:CalculateSize();
-
-	Controls.CollapseAll:SetHide( false );
-	Controls.BottomYieldTotals:SetHide( true );
-	Controls.BottomResourceTotals:SetHide( true );
-	Controls.BottomPoliciesFilters:SetHide( true );
-	Controls.BottomMinorsFilters:SetHide( true );
-	Controls.Scroll:SetSizeY( Controls.Main:GetSizeY() - SIZE_HEIGHT_PADDING_BOTTOM_ADJUST);
-	-- Remember this tab when report is next opened: ARISTOS
-	m_kCurrentTab = 5;
-end
-
-
 -- ===========================================================================
 -- POLICY PAGE
 -- ===========================================================================
@@ -4487,7 +4404,7 @@ include("BRSPage_Cities2");
 function UpdateCities2Data()
 	print("UpdateCities2Data");
 	Timer1Start();
-	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+	m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, _, m_kUnitDataReport = GetData();
 	Timer1Tick("UpdateCities2Data");
 	g_DirtyFlag.CITIES2 = false;
 end
@@ -4908,7 +4825,7 @@ function Initialize()
 		function()
 			if not tUnitSort.parent then return; end
 			-- refresh data and re-sort group which upgraded unit was from
-			m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, m_kCurrentDeals, m_kUnitDataReport = GetData();
+			m_kCityData, m_kCityTotalData, _, m_kUnitData, m_kDealData, _, m_kUnitDataReport = GetData();
 			UpdatePolicyData();
 			UpdateMinorData();
 			sort_units( tUnitSort.type, tUnitSort.group, tUnitSort.parent );
