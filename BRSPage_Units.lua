@@ -16,6 +16,9 @@ local m_kSupportedFormationClasses: table = {
 	FORMATION_CLASS_AIR = true,
 };
 
+-- 230425 #7 cache for storing list of units for abilities
+g_AbilitiesUnits = {}; -- this is based on TypeTags table, so it is static
+
 --BRS !! Added function to sort out tables for units
 -- Infixo: this is only used by Upgrade Callback; parent will be used a flag; must be set to nil when leaving report screen
 local tUnitSort = { type = "", group = "", parent = nil };
@@ -848,6 +851,26 @@ function ViewUnitsPage()
 	Controls.Scroll:SetSizeY( Controls.Main:GetSizeY() - SIZE_HEIGHT_PADDING_BOTTOM_ADJUST );
 	-- Remember this tab when report is next opened: ARISTOS
 	m_kCurrentTab = 6;
+end
+
+-- 230425 create cache that stores units assigned to abilities
+function InitializeAbilitiesUnits()
+	-- first pass - extract all abilities and assigned classes
+	for row in GameInfo.TypeTags() do
+		if string.sub(row.Type, 1, 8) == "ABILITY_" then
+			if g_AbilitiesUnits[row.Type] == nil then g_AbilitiesUnits[row.Type] = {}; end
+			g_AbilitiesUnits[row.Type][row.Tag] = true;
+		end
+	end
+	-- second pass - extract units
+	for row in GameInfo.TypeTags() do
+		if string.sub(row.Type, 1, 5) == "UNIT_" then
+			-- register the unit for all abilities that have its class
+			for _,units in pairs(g_AbilitiesUnits) do -- key is not important now
+				if units[row.Tag] then units[row.Type] = true; end
+			end
+		end
+	end
 end
 
 function InitializeUnits()
