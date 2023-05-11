@@ -26,6 +26,8 @@ function GetDataYields()
 		return;
 	end
 	
+	local isShowDetails: boolean = not Controls.HideCityBuildingsCheckbox:IsSelected(); -- read detailed data only when needed
+
 	local kCityData		:table = {};
 	local kCityTotalData:table = {
 		Income	= {},
@@ -51,6 +53,8 @@ function GetDataYields()
 	local pReligion	:table	= player:GetReligion();
 	local pScience	:table	= player:GetTechs();
 	local pUnits    :table  = player:GetUnits(); -- 230425 moved
+	
+	if isShowDetails then -- modifiers are needed only when details are shown
 	
 	-----------------------------------
 	-- MODIFIERS
@@ -164,15 +168,17 @@ function GetDataYields()
 		
 	end
 	--print("--------------"); print("FOUND MODIFIERS FOR CITIES"); for k,v in pairs(m_kModifiers) do print(k, #v); end
+	
+	end -- if isShowDetails
 
 	-- =================================================================
 	--print("GetDataYields: cities");
 	for _,pCity in player:GetCities():Members() do
 		local cityName: string = pCity:GetName();
+		--print("city", LL(cityName));
 			
 		-- Big calls, obtain city data and add report specific fields to it.
-		local data		:table	= GetCityData( pCity );
-		--data.Resources			= GetCityResourceData( pCity ); -- Add more data (not in CitySupport)			
+		local data: table = GetCityData( pCity );
 		data.WorkedTileYields, data.NumWorkedTiles, data.SpecialistYields, data.NumSpecialists = GetWorkedTileYieldData( pCity, pCulture );	-- Add more data (not in CitySupport)
 
 		-- Add to totals.
@@ -193,7 +199,9 @@ function GetDataYields()
 		-- ADDITIONAL DATA
 		
 		-- Modifiers
-		data.Modifiers = m_kModifiers[ cityName ]; -- just a reference to the main table
+		if isShowDetails then
+			data.Modifiers = m_kModifiers[ cityName ]; -- just a reference to the main table
+		end
 		
 		-- real housing from improvements - this is a permanent fix for data.Housing field, so it is safe to use it later
 		data.RealHousingFromImprovements = GetRealHousingFromImprovements(pCity);
@@ -587,6 +595,7 @@ function UpdateYieldsData()
 	m_kCityData, m_kCityTotalData, m_kUnitData, m_kDealData = GetDataYields();
 	Timer1Tick("UpdateYieldsData");
 	g_DirtyFlag.YIELDS = false;
+	if not Controls.HideCityBuildingsCheckbox:IsSelected() then g_DirtyFlag.YIELDSDETAILS = false; end
 end
 
 -- ===========================================================================
@@ -623,9 +632,9 @@ local populationToCultureScale:number = GameInfo.GlobalParameters["CULTURE_PERCE
 local populationToScienceScale:number = GameInfo.GlobalParameters["SCIENCE_PERCENTAGE_YIELD_PER_POP"].Value / 100; -- Infixo added science per pop
 
 function ViewYieldsPage()
-	print("ViewYieldsPage");
+	print("ViewYieldsPage", g_DirtyFlag.YIELDS, g_DirtyFlag.YIELDSDETAILS, Controls.HideCityBuildingsCheckbox:IsSelected());
 
-	if g_DirtyFlag.YIELDS then UpdateYieldsData(); end
+	if g_DirtyFlag.YIELDS or g_DirtyFlag.YIELDSDETAILS then UpdateYieldsData(); end
 
 	ResetTabForNewPageContent();
 
@@ -1333,7 +1342,7 @@ end
 
 -- Checkboxes for hiding city details and free units/buildings
 
-function OnToggleHideCityBuildings()
+function OnToggleHideCityBuildings() -- this is actually "Hide City Details"
 	local isChecked = Controls.HideCityBuildingsCheckbox:IsSelected();
 	Controls.HideCityBuildingsCheckbox:SetSelected( not isChecked );
 	ViewYieldsPage()

@@ -95,6 +95,7 @@ m_kCurrentTab = 1;
 -- 230510 Dirty flags - if true then the data needs to be updated
 g_DirtyFlag = {
 	YIELDS = true,
+	YIELDSDETAILS = true,
 	RESOURCES = true,
 	CITYSTATUS = true,
 	GOSSIP = true,
