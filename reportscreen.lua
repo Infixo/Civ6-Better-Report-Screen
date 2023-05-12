@@ -22,7 +22,7 @@ include("Civ6Common");
 include("InstanceManager");
 include("TabSupport");
 
--- exposing functions and variables
+-- Exposing functions and variables
 if not ExposedMembers.RMA then ExposedMembers.RMA = {} end;
 RMA = ExposedMembers.RMA;
 
@@ -34,16 +34,12 @@ print("Gathering Storm:", (bIsGatheringStorm and "YES" or "no"));
 bIsMonopolies = GameCapabilities.HasCapability("CAPABILITY_MONOPOLIES"); -- Monopoly and Corporations Mode
 print("Monopolies     :", (bIsMonopolies and "YES" or "no"));
 
--- configuration options
+-- Configuration options
 local bOptionModifiers:boolean = ( GlobalParameters.BRS_OPTION_MODIFIERS == 1 );
 
-
--- ===========================================================================
---	CONSTANTS
--- ===========================================================================
+-- Global constants
 LL = Locale.Lookup;
 ENDCOLOR = "[ENDCOLOR]";
-local DATA_FIELD_SELECTION: string = "Selection";
 SIZE_HEIGHT_PADDING_BOTTOM_ADJUST = 87;	-- (Total Y - (scroll area + THIS PADDING)) = bottom area
 TOOLTIP_SEP         = "-------------------";
 TOOLTIP_SEP_NEWLINE = "[NEWLINE]"..TOOLTIP_SEP.."[NEWLINE]";
@@ -72,22 +68,9 @@ function spairs( t, order_function )
 	end
 end
 
-
--- ===========================================================================
---	VARIABLES
--- ===========================================================================
-
-m_simpleIM				= InstanceManager:new("SimpleInstance",			"Top",		Controls.Stack);				-- Non-Collapsable, simple
-m_tabIM					= InstanceManager:new("TabInstance",			"Button",	Controls.TabContainer);
-m_strategicResourcesIM	= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.StrategicResources);
-m_bonusResourcesIM		= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.BonusResources);
-m_luxuryResourcesIM		= InstanceManager:new("ResourceAmountInstance",	"Info",		Controls.LuxuryResources);
-m_groupIM				= InstanceManager:new("GroupInstance",			"Top",		Controls.Stack);				-- Collapsable
-
-m_tabs = nil;
-local m_uiGroups			:table = nil;	-- Track the groups on-screen for collapse all action.
-
-local m_isCollapsing		:boolean = true;
+-- Instance Managers
+m_simpleIM = InstanceManager:new("SimpleInstance", "Top", Controls.Stack); -- Non-Collapsable, simple
+m_groupIM  = InstanceManager:new("GroupInstance",  "Top", Controls.Stack); -- Collapsable
 
 -- Remember last tab variable: ARISTOS
 m_kCurrentTab = 1;
@@ -105,6 +88,16 @@ g_DirtyFlag = {
 	MINOR = true,
 	CITIES2 = true,
 };
+
+
+-- Tab support
+local DATA_FIELD_SELECTION: string = "Selection";
+local m_tabIM: table = InstanceManager:new("TabInstance", "Button", Controls.TabContainer);
+local m_tabs: table = nil;
+
+-- Collapsing support
+local m_uiGroups			:table = nil;	-- Track the groups on-screen for collapse all action.
+local m_isCollapsing		:boolean = true;
 
 
 -- ===========================================================================

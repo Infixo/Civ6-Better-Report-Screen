@@ -4,7 +4,7 @@
 -- 2023-05-10: Created
 -- ===========================================================================
 
-include("LeaderIcon"); -- Used by Gossip page
+--include("LeaderIcon"); -- Used by Gossip page
 
 local GOSSIP_GROUP_TYPES: table = {
 	"ALL",
@@ -25,7 +25,7 @@ local GOSSIP_GROUP_TYPES: table = {
 --Gossip filtering
 local m_kGossipInstances:table = {};
 local m_groupFilter:number = 1;	-- (1) Indicates Unfiltered by this criteria (Group Type Index)
-local m_leaderFilter:number = -1;	-- (-1) Indicates Unfilitered by this criteria (PlayerID)
+local m_leaderFilter:number = -1; -- (-1) Indicates Unfilitered by this criteria (PlayerID)
 
 function UpdateGossipData()
 	print("UpdateGossipData");
@@ -71,7 +71,7 @@ function ViewGossipPage()
 		uiFilterInstance.GroupFilter:BuildEntry("InstanceOne", uiFilter);
 		uiFilter.Button:SetText(Locale.Lookup("LOC_HUD_REPORTS_FILTER_" .. type));
 		uiFilter.Button:SetVoid1(i);
-		uiFilter.Button:SetSizeX(252);
+		--uiFilter.Button:SetSizeX(252); -- moved to xml
 	end
 	uiFilterInstance.GroupFilter:RegisterSelectionCallback(function(i:number)
 		uiFilterInstance.GroupFilter:GetButton():SetText(Locale.Lookup("LOC_HUD_REPORTS_FILTER_" .. GOSSIP_GROUP_TYPES[i]));
@@ -89,12 +89,13 @@ function ViewGossipPage()
 	--Make our 'All' Filter for players
 	local uiAllFilter:table = {};
 	uiFilterInstance.PlayerFilter:BuildEntry("InstanceOne", uiAllFilter);
-	uiAllFilter.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
-	uiAllFilter.LeaderIcon.Portrait:SetHide(false);
-	uiAllFilter.LeaderIcon.TeamRibbon:SetHide(true);
+	uiAllFilter.LeaderIcon:SetIcon("ICON_LEADER_ALL");
+	--uiAllFilter.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
+	--uiAllFilter.LeaderIcon.Portrait:SetHide(false);
+	--uiAllFilter.LeaderIcon.TeamRibbon:SetHide(true);
 	uiAllFilter.Button:SetText(Locale.Lookup("LOC_HUD_REPORTS_PLAYER_FILTER_ALL"));
 	uiAllFilter.Button:SetVoid1(-1);
-	uiAllFilter.Button:SetSizeX(252);
+	--uiAllFilter.Button:SetSizeX(252); -- moved to xml
 	
 	--Timer1Tick("ViewGossipPage: filters");
 
@@ -120,19 +121,21 @@ function ViewGossipPage()
 				--Build and update
 				--local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilter.LeaderIcon);
 				--filterLeaderIcon:UpdateIcon(iconName, targetID, true);
+				uiFilter.LeaderIcon:SetIcon(iconName);
 				uiFilter.Button:SetText(Locale.Lookup(PlayerConfigurations[targetID]:GetLeaderName()));
 				uiFilter.Button:SetVoid1(targetID);
-				uiFilter.Button:SetSizeX(252);
+				--uiFilter.Button:SetSizeX(252); -- moved to xml
 			end
 		end
 	end
 
 	uiFilterInstance.PlayerFilter:RegisterSelectionCallback(function(i:number)
 		if i == -1 then
-			uiFilterInstance.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
-			uiFilterInstance.LeaderIcon.Portrait:SetHide(false);
-			uiFilterInstance.LeaderIcon.TeamRibbon:SetHide(true);
-			uiFilterInstance.LeaderIcon.Relationship:SetHide(true);
+			uiFilterInstance.LeaderIcon:SetIcon("ICON_LEADER_ALL");
+			--uiFilterInstance.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
+			--uiFilterInstance.LeaderIcon.Portrait:SetHide(false);
+			--uiFilterInstance.LeaderIcon.TeamRibbon:SetHide(true);
+			--uiFilterInstance.LeaderIcon.Relationship:SetHide(true);
 			uiFilterInstance.PlayerFilter:GetButton():SetText(Locale.Lookup("LOC_HUD_REPORTS_PLAYER_FILTER_ALL"));
 		else
 			local leaderName:string = PlayerConfigurations[i]:GetLeaderTypeName();
@@ -140,6 +143,7 @@ function ViewGossipPage()
 			--Build and update
 			--local filterLeaderIcon:table = LeaderIcon:AttachInstance(uiFilterInstance.LeaderIcon);
 			--filterLeaderIcon:UpdateIcon(iconName, i, true);
+			uiFilterInstance.LeaderIcon:SetIcon(iconName);
 			uiFilterInstance.PlayerFilter:GetButton():SetText(Locale.Lookup(PlayerConfigurations[i]:GetLeaderName()));
 		end
 		m_leaderFilter = i;
@@ -148,14 +152,15 @@ function ViewGossipPage()
 	
 	--Timer1Tick("ViewGossipPage: fetch all");
 
-	uiFilterInstance.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
-	uiFilterInstance.LeaderIcon.Portrait:SetHide(false);
-	uiFilterInstance.LeaderIcon.TeamRibbon:SetHide(true);
-	uiFilterInstance.LeaderIcon.Relationship:SetHide(true);
+	uiFilterInstance.LeaderIcon:SetIcon("ICON_LEADER_ALL");
+	--uiFilterInstance.LeaderIcon.Portrait:SetIcon("ICON_LEADER_ALL");
+	--uiFilterInstance.LeaderIcon.Portrait:SetHide(false);
+	--uiFilterInstance.LeaderIcon.TeamRibbon:SetHide(true);
+	--uiFilterInstance.LeaderIcon.Relationship:SetHide(true);
 	uiFilterInstance.PlayerFilter:GetButton():SetText(Locale.Lookup("LOC_HUD_REPORTS_PLAYER_FILTER_ALL"));
 
 	table.sort(kGossipLog, function(a, b) return a[2] > b[2]; end);
-	Timer2Start();
+	--Timer2Start();
 	for _, kGossipEntry in pairs(kGossipLog) do
 		local leaderName:string = PlayerConfigurations[kGossipEntry[4]]:GetLeaderTypeName();
 		local iconName:string = "ICON_" .. leaderName;
@@ -167,6 +172,8 @@ function ViewGossipPage()
 		--Build and update
 		--local gossipLeaderIcon:table = LeaderIcon:AttachInstance(pGossipInstance.Leader);
 		--gossipLeaderIcon:UpdateIcon(iconName, kGossipEntry[4], true);
+		pGossipInstance.LeaderIcon:SetIcon(iconName);
+		pGossipInstance.LeaderName:SetText(LL(PlayerConfigurations[kGossipEntry[4]]:GetLeaderName()));
 		
 		pGossipInstance.Date:SetText(kGossipEntry[2]);
 		pGossipInstance.Icon:SetIcon("ICON_GOSSIP_" .. kGossipData.GroupType);
@@ -175,7 +182,7 @@ function ViewGossipPage()
 		--Build our references
 		table.insert(m_kGossipInstances, {instance = pGossipInstance, leaderID = kGossipEntry[4], gossipType = kGossipData.GroupType});
 	end
-	Timer2Tick("ViewGossipPage: display only");
+	--Timer2Tick("ViewGossipPage: display only");
 	--Timer1Tick("ViewGossipPage: display");
 
 	--Refresh our sizes

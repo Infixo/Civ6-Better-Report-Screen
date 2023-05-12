@@ -6,6 +6,10 @@
 
 m_kResourceData = nil; -- global for debug purposes
 
+local m_strategicResourcesIM: table = InstanceManager:new("ResourceAmountInstance",	"Info", Controls.StrategicResources);
+local m_bonusResourcesIM: table     = InstanceManager:new("ResourceAmountInstance",	"Info", Controls.BonusResources);
+local m_luxuryResourcesIM: table    = InstanceManager:new("ResourceAmountInstance",	"Info", Controls.LuxuryResources);
+
 function AddMiscResourceData(pResourceData:table, kResourceTable:table)
 	if bIsGatheringStorm then return AddMiscResourceDataXP2(pResourceData, kResourceTable); end
 	
