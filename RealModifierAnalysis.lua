@@ -86,15 +86,48 @@ function dshowsubjects(pSubjects:table)
 end
 
 --------------------------------------------------------------
--- Timer
+-- Timer; usage is: Reset -> repeat ()
 --------------------------------------------------------------
-local fStartTime:number = 0.0
-function TimerStart()
-	fStartTime = Automation.GetTime()
+
+local MILISECS_PER_TICK: number = 10000;
+local m_Timer1: number = 0
+local m_Timer2: number = 0
+local m_NumTicks1: number = 0;
+local m_NumTicks2: number = 0;
+local m_StartTime1: number = 0;
+local m_StartTime2: number = 0;
+
+function Timer1Reset()
+	m_Timer1 = 0; m_NumTicks1 = 0;
 end
-function TimerTick(txt:string)
-	print("Timer Tick", txt, string.format("%5.3f", Automation.GetTime()-fStartTime))
+function Timer2Reset()
+	m_Timer2 = 0; m_NumTicks2 = 0;
 end
+function Timer1Start()
+	m_StartTime1 = GetTickCount();
+end
+function Timer2Start()
+	m_StartTime2 = GetTickCount();
+end
+function Timer1Tick()
+	m_Timer1 = m_Timer1 + (GetTickCount()-m_StartTime1);
+	m_NumTicks1 = m_NumTicks1 + 1;
+	--print("Ticker1:", m_NumTicks1, m_Timer1); -- debug
+end
+function Timer2Tick()
+	m_Timer2 = m_Timer2 + (GetTickCount()-m_StartTime2);
+	m_NumTicks2 = m_NumTicks2 + 1;
+	--print("Ticker2:", m_NumTicks2, m_Timer2); -- debug
+end
+function Timer1Stop(txt:string)
+	if m_NumTicks1 == 0 then print("Timer1: no ticks"); return; end
+	print("Timer1:", txt, math.floor(m_Timer1/MILISECS_PER_TICK), "milisecs", m_NumTicks1, "ticks", math.floor(m_Timer1/m_NumTicks1), "per tick");
+end
+function Timer2Stop(txt:string)
+	if m_NumTicks2 == 0 then print("Timer2: no ticks"); return; end
+	print("Timer2:", txt, math.floor(m_Timer2/MILISECS_PER_TICK), "milisecs", m_NumTicks2, "ticks", math.floor(m_Timer2/m_NumTicks2), "per tick");
+end
+
 
 -- ===========================================================================
 -- DATA AND VARIABLES
@@ -1254,7 +1287,7 @@ end
 -- 4. Analyze EffectType
 -- ===========================================================================
 
-local tModifiers = {}; -- main table to store all modifiers; will be populated online, also acting as cache
+tModifiers = {}; -- main table to store all modifiers; will be populated online, also acting as cache
 -- Modifier
 --   .ModifierId
 --   .ModifierType
@@ -1265,13 +1298,13 @@ local tModifiers = {}; -- main table to store all modifiers; will be populated o
 --   .EffectType
 --   .Arguments - table of {Name=Value}
 
-local tReqs = {}; -- main table to store all requirements; will be populated online, also acting as cache
+tReqs = {}; -- main table to store all requirements; will be populated online, also acting as cache
 -- Req
 --   .ReqId
 --   .Arguments
 --   more fields here
 
-local tReqSets = {}; -- main table to store all requirement sets; will be populated online, also acting as cache
+tReqSets = {}; -- main table to store all requirement sets; will be populated online, also acting as cache
 -- ReqSet
 --   .ReqSetId
 --   .TestAll / .TestAny
@@ -1285,25 +1318,29 @@ function FetchAndCacheDataReq(sReqId:string)
 	-- check if we already have it
 	local tReq:table = tReqs[ sReqId ];
 	if tReq then return tReq; end
-	-- filters in GameInfo don't work for modifiers, we need to use normal search
+	-- initialize an empty req
 	tReq = {};
-	-- Requirements
-	for req in GameInfo.Requirements() do
-		if req.RequirementId == sReqId then
-			--dprint("...found ", sReqId);
-			tReq.ReqId         = sReqId;
-			tReq.ReqType       = req.RequirementType;
-			tReq.Inverse       = req.Inverse; -- boolean
-			tReq.Persistent    = req.Persistent; -- boolean, only 1% are true - TODO: WHAT DOES IT DO?
-			tReq.ProgressWeight= req.ProgressWeight; -- integer, 1% is 0, the rest is 1
-			tReq.Triggered     = req.Triggered; -- boolean, only 2% are true
-			-- .Likeliness, .Impact -- always 0
-			-- .Reverse -- always false
-			break;
-		end
-	end
-	-- RequirementArguments - this one must be searched entirely
 	tReq.Arguments = {};
+	tReqs[ sReqId ] = tReq;
+	-- Requirements
+	local req: table = GameInfo.Requirements[sReqId]; -- 230513 #2 it is a PK!
+	if not req then print("ERROR: FetchAndCacheDataReq unknown requirement", sReqId); return tReq; end
+	--for req in GameInfo.Requirements() do
+		--if req.RequirementId == sReqId then
+			--dprint("...found ", sReqId);
+	tReq.ReqId         = sReqId;
+	tReq.ReqType       = req.RequirementType;
+	tReq.Inverse       = req.Inverse; -- boolean
+	tReq.Persistent    = req.Persistent; -- boolean, only 1% are true - TODO: WHAT DOES IT DO?
+	tReq.ProgressWeight= req.ProgressWeight; -- integer, 1% is 0, the rest is 1
+	tReq.Triggered     = req.Triggered; -- boolean, only 2% are true
+	-- .Likeliness, .Impact -- always 0
+	-- .Reverse -- always false
+			--break;
+		--end
+	--end
+	-- RequirementArguments - this one must be searched entirely
+	--[[
 	for arg in GameInfo.RequirementArguments() do
 		if arg.RequirementId == sReqId then
 			-- now we need to convert values into a proper type
@@ -1317,8 +1354,14 @@ function FetchAndCacheDataReq(sReqId:string)
 			--end
 		end
 	end
+	--]]
+	tResults = DB.Query("SELECT * FROM RequirementArguments WHERE RequirementId = ?", sReqId);
+	if tResults and #tResults > 0 then
+		for _,arg in ipairs(tResults) do
+			tReq.Arguments[ arg.Name ] = arg.Value;
+		end
+	end
 	-- done!
-	tReqs[ sReqId ] = tReq;
 	return tReq;
 end
 
@@ -1326,13 +1369,13 @@ function DecodeReq(tOut:table, sReqId:string)
 	--dprint("FUNCAL DecodeReq(req)",sReqId);
 	local tReq:table = FetchAndCacheDataReq(sReqId);
 	if not tReq then return "ERROR: "..sReqId.." not defined!"; end
-	table.insert(tOut, INDENT2..Capitalize(sReqId));
-	table.insert(tOut, INDENT2.."Type: "..Capitalize(tReq.ReqType));
+	table.insert(tOut, INDENT2..sReqId);
+	table.insert(tOut, INDENT2.."Type: "..string.sub(tReq.ReqType, 13)); -- 230513 #2 hide REQUIREMENT_
 	for name,value in pairs(tReq.Arguments) do table.insert(tOut, INDENT2..name.." = "..value); end
 	if tReq.Inverse then table.insert(tOut, INDENT2.."Inverse"); end
 	if tReq.Persistent then table.insert(tOut, INDENT2.."Persistent"); end
 	if tReq.Triggered then table.insert(tOut, INDENT2.."Triggered"); end
-	table.insert(tOut, INDENT2.."ProgressWeight = "..tReq.ProgressWeight);
+	if tReq.ProgressWeight ~= 1 then table.insert(tOut, INDENT2.."ProgressWeight = "..tReq.ProgressWeight); end -- 230513 #2 3 cases where 0
 end
 
 
@@ -1341,22 +1384,23 @@ function FetchAndCacheDataReqSet(sReqSetId:string)
 	-- check if we already have it
 	local tReqSet:table = tReqSets[ sReqSetId ];
 	if tReqSet then return tReqSet; end
-	-- filters in GameInfo don't work for modifiers, we need to use normal search
-	tReqSet = {};
 	-- RequirementSets
-	for req in GameInfo.RequirementSets() do
-		if req.RequirementSetId == sReqSetId then
+	local req: table = GameInfo.RequirementSets[sReqSetId]; -- #230513 this is a PK!
+	if not req then print("ERROR: FetchAndCacheDataReqSet unknown req set", sReqSetId); return nil; end
+	tReqSet = {};
+	--for req in GameInfo.RequirementSets() do
+		--if req.RequirementSetId == sReqSetId then
 			--dprint("...found ", sReqSetId);
-			tReqSet.ReqSetId = sReqSetId;
-			tReqSet.TestAll = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ALL" );-- 90% are TEST_ALL
-			tReqSet.TestAny = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ANY" );
-			tReqSet.Reqs = {};
-			break;
-		end
-	end
-	-- check if it exists!
-	if table.count(tReqSet) == 0 then return nil; end
+	tReqSet.ReqSetId = sReqSetId;
+	tReqSet.TestAll = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ALL" );-- 90% are TEST_ALL
+	tReqSet.TestAny = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ANY" );
+	tReqSet.Reqs = {};
+			--break;
+		--end
+	--end
 	-- fill actual Requirements (from RequirementSetRequirements)
+	-- filters in GameInfo don't work for modifiers, we need to use normal search
+	--[[
 	for req in GameInfo.RequirementSetRequirements() do
 		if req.RequirementSetId == sReqSetId then
 			table.insert(tReqSet.Reqs, FetchAndCacheDataReq(req.RequirementId));
@@ -1364,6 +1408,13 @@ function FetchAndCacheDataReqSet(sReqSetId:string)
 			--if tReq.ReqType == "REQUIREMENT_REQUIREMENTSET_IS_MET" and tReq.Arguments.RequirementSetId then
 				--DecodeReqSet(tOut, tReq.Arguments.RequirementSetId);
 			--end
+		end
+	end
+	--]]
+	local tResults: table = DB.Query("SELECT * FROM RequirementSetRequirements WHERE RequirementSetId = ?", sReqSetId);
+	if tResults and #tResults > 0 then
+		for _,req in ipairs(tResults) do
+			table.insert(tReqSet.Reqs, FetchAndCacheDataReq(req.RequirementId));
 		end
 	end
 	-- done!
@@ -2739,6 +2790,35 @@ function Initialize()
 		Events.EmergencyCompleted.Add( 	 function() bBaseDataDirty = true end );
 	end
 	
+	-- PERFORMANCE TESTING
+	-- Reading all requirements - huge improvement, 90 ms -> 20 ms
+	Timer1Reset(); Timer1Start();
+	for req in GameInfo.Requirements() do
+		_ = FetchAndCacheDataReq(req.RequirementId);
+	end
+	Timer1Tick(); Timer1Stop("reading all requirements");
+	-- Decoding all requirements - pretty insignificant, 3 ms -> 2 ms
+	-- Reading all requirement sets - huge improvement, 140 ms -> 15 ms
+	Timer1Reset(); Timer1Start();
+	for req in GameInfo.RequirementSets() do
+		_ = FetchAndCacheDataReqSet(req.RequirementSetId);
+	end
+	Timer1Tick(); Timer1Stop("reading all requirement sets");
+	
+	--[[
+	local tOut: table = {};
+	Timer1Reset();
+	Timer1Start();
+	--Timer2Reset();
+	for req in GameInfo.Requirements() do
+		tOut = {};
+		DecodeReq(tOut, req.RequirementId);
+		--print(table.concat(tOut));
+	end
+	Timer1Tick();
+	Timer1Stop("decoding all requirements");
+	--Timer2Stop("args");
+	--]]
 end
 Initialize();
 
