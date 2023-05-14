@@ -134,9 +134,9 @@ end
 -- ===========================================================================
 
 local bBaseDataDirty:boolean = true; -- set to true to refresh the data
-tCities = nil; -- dynamically filled when needed (e.g. after refresh)
-tPlayer = nil; -- dynamically filled when needed (e.g. after refresh)
-tPlots = nil; -- only the local player's plots
+local tCities: table = nil; -- dynamically filled when needed (e.g. after refresh)
+local tPlayer: table = nil; -- dynamically filled when needed (e.g. after refresh)
+local tPlots: table = nil; -- only the local player's plots
 
 -- supported Subject types, will be put into SubjectType field of respective tables
 local SubjectTypes:table = {
@@ -405,11 +405,11 @@ end
 -- ===========================================================================
 DATA_DOMINANT_RELIGION = "_DOMINANTRELIGION";
 
-YIELD_STATE = {
-	NORMAL  = 0,
-	FAVORED = 1,
-	IGNORED = 2
-}
+--YIELD_STATE = {
+	--NORMAL  = 0,
+	--FAVORED = 1,
+	--IGNORED = 2
+--}
 
 
 -- ===========================================================================
@@ -1287,7 +1287,7 @@ end
 -- 4. Analyze EffectType
 -- ===========================================================================
 
-tModifiers = {}; -- main table to store all modifiers; will be populated online, also acting as cache
+local tModifiers: table = {}; -- main table to store all modifiers; will be populated online, also acting as cache
 -- Modifier
 --   .ModifierId
 --   .ModifierType
@@ -1298,36 +1298,30 @@ tModifiers = {}; -- main table to store all modifiers; will be populated online,
 --   .EffectType
 --   .Arguments - table of {Name=Value}
 
-tReqs = {}; -- main table to store all requirements; will be populated online, also acting as cache
+local tReqs: table = {}; -- main table to store all requirements; will be populated online, also acting as cache
 -- Req
 --   .ReqId
 --   .Arguments
 --   more fields here
 
-tReqSets = {}; -- main table to store all requirement sets; will be populated online, also acting as cache
+local tReqSets: table = {}; -- main table to store all requirement sets; will be populated online, also acting as cache
 -- ReqSet
 --   .ReqSetId
 --   .TestAll / .TestAny
 --   .Reqs - table of {Req}
 
-local INDENT1 = "    ";
-local INDENT2 = INDENT1..INDENT1;
 
 function FetchAndCacheDataReq(sReqId:string)
 	--dprint("FUNCAL FetchAndCacheDataReq(req)", sReqId);
 	-- check if we already have it
 	local tReq:table = tReqs[ sReqId ];
 	if tReq then return tReq; end
+	-- Requirements
+	local req: table = GameInfo.Requirements[sReqId]; -- 230513 #2 This is a PK!
+	-- Check if exists
+	if not req then print("ERROR: FetchAndCacheDataReq unknown requirement", sReqId); return nil; end
 	-- initialize an empty req
 	tReq = {};
-	tReq.Arguments = {};
-	tReqs[ sReqId ] = tReq;
-	-- Requirements
-	local req: table = GameInfo.Requirements[sReqId]; -- 230513 #2 it is a PK!
-	if not req then print("ERROR: FetchAndCacheDataReq unknown requirement", sReqId); return tReq; end
-	--for req in GameInfo.Requirements() do
-		--if req.RequirementId == sReqId then
-			--dprint("...found ", sReqId);
 	tReq.ReqId         = sReqId;
 	tReq.ReqType       = req.RequirementType;
 	tReq.Inverse       = req.Inverse; -- boolean
@@ -1336,34 +1330,20 @@ function FetchAndCacheDataReq(sReqId:string)
 	tReq.Triggered     = req.Triggered; -- boolean, only 2% are true
 	-- .Likeliness, .Impact -- always 0
 	-- .Reverse -- always false
-			--break;
-		--end
-	--end
 	-- RequirementArguments - this one must be searched entirely
-	--[[
-	for arg in GameInfo.RequirementArguments() do
-		if arg.RequirementId == sReqId then
-			-- now we need to convert values into a proper type
-			-- there are 81 names, so maybe we'll do it when actually trying to use it?
-			--dprint("..found arg", arg.Name, arg.Value);
-			tReq.Arguments[ arg.Name ] = arg.Value;
-			-- special handling for Type not necessary (yet?) - all are ARGTYPE_IDENTITY
-			--if arg.Type == "ScaleByGameSpeed" then
-				-- add here: access game speed, multiply by it
-				--tModifier.ScaleByGameSpeed = true;
-			--end
-		end
-	end
-	--]]
-	tResults = DB.Query("SELECT * FROM RequirementArguments WHERE RequirementId = ?", sReqId);
+	tReq.Arguments = {};
+	local tResults: table = DB.Query("SELECT * FROM RequirementArguments WHERE RequirementId = ?", sReqId);
 	if tResults and #tResults > 0 then
 		for _,arg in ipairs(tResults) do
 			tReq.Arguments[ arg.Name ] = arg.Value;
 		end
 	end
 	-- done!
+	tReqs[ sReqId ] = tReq;
 	return tReq;
 end
+
+local INDENT2 = "   ";
 
 function DecodeReq(tOut:table, sReqId:string)
 	--dprint("FUNCAL DecodeReq(req)",sReqId);
@@ -1388,29 +1368,12 @@ function FetchAndCacheDataReqSet(sReqSetId:string)
 	local req: table = GameInfo.RequirementSets[sReqSetId]; -- #230513 this is a PK!
 	if not req then print("ERROR: FetchAndCacheDataReqSet unknown req set", sReqSetId); return nil; end
 	tReqSet = {};
-	--for req in GameInfo.RequirementSets() do
-		--if req.RequirementSetId == sReqSetId then
-			--dprint("...found ", sReqSetId);
 	tReqSet.ReqSetId = sReqSetId;
 	tReqSet.TestAll = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ALL" );-- 90% are TEST_ALL
 	tReqSet.TestAny = ( req.RequirementSetType == "REQUIREMENTSET_TEST_ANY" );
 	tReqSet.Reqs = {};
-			--break;
-		--end
-	--end
 	-- fill actual Requirements (from RequirementSetRequirements)
 	-- filters in GameInfo don't work for modifiers, we need to use normal search
-	--[[
-	for req in GameInfo.RequirementSetRequirements() do
-		if req.RequirementSetId == sReqSetId then
-			table.insert(tReqSet.Reqs, FetchAndCacheDataReq(req.RequirementId));
-			-- it is possible that there will a call to another requirement via Type = REQUIREMENT_REQUIREMENTSET_IS_MET
-			--if tReq.ReqType == "REQUIREMENT_REQUIREMENTSET_IS_MET" and tReq.Arguments.RequirementSetId then
-				--DecodeReqSet(tOut, tReq.Arguments.RequirementSetId);
-			--end
-		end
-	end
-	--]]
 	local tResults: table = DB.Query("SELECT * FROM RequirementSetRequirements WHERE RequirementSetId = ?", sReqSetId);
 	if tResults and #tResults > 0 then
 		for _,req in ipairs(tResults) do
@@ -1426,8 +1389,8 @@ function DecodeReqSet(tOut:table, sReqSetId:string)
 	--dprint("FUNCAL DecodeReqSet(req)",sReqSetId);
 	local tReqSet:table = FetchAndCacheDataReqSet(sReqSetId);
 	if not tReqSet then return "ERROR: "..sReqSetId.." not defined!"; end
-	if tReqSet.TestAll then table.insert(tOut, INDENT1.."Test All of:"); end
-	if tReqSet.TestAny then table.insert(tOut, INDENT1.."Test Any of:"); end
+	if tReqSet.TestAll then table.insert(tOut, "Test ALL of:"); end
+	if tReqSet.TestAny then table.insert(tOut, "Test ANY of:"); end
 	for _,req in ipairs(tReqSet.Reqs) do DecodeReq(tOut, req.ReqId); end
 end
 
@@ -1440,41 +1403,46 @@ function FetchAndCacheData(sModifierId:string)
 	-- filters in GameInfo don't work for modifiers, we need to use normal search
 	tModifier = {};
 	-- Modifiers
-	for mod in GameInfo.Modifiers() do
-		if mod.ModifierId == sModifierId then
-			--dprint("...found ", sModifierId);
-			tModifier.ModifierId   = sModifierId;
-			tModifier.ModifierType = mod.ModifierType;
-			tModifier.RunOnce      = mod.RunOnce; -- boolean
-			tModifier.NewOnly      = mod.NewOnly; -- boolean
-			tModifier.Permanent    = mod.Permanent; -- boolean
-			tModifier.OwnerReqSetId = mod.OwnerRequirementSetId;
-			tModifier.SubjectReqSetId = mod.SubjectRequirementSetId;
-			--tModifier.Text = ""; -- filled later
-			break;
-		end
-	end
+	local mod: table = GameInfo.Modifiers[sModifierId]; -- 230514 #2 This is a PK!
 	-- check if it exists!
-	if table.count(tModifier) == 0 then print("WARNING! FetchAndCacheData: No definition for Modifier", sModifierId); return nil; end
+	if not mod then print("WARNING! FetchAndCacheData: No definition for Modifier", sModifierId); return nil; end
+	tModifier.ModifierId   = sModifierId;
+	tModifier.ModifierType = mod.ModifierType;
+	tModifier.RunOnce      = mod.RunOnce; -- boolean
+	tModifier.NewOnly      = mod.NewOnly; -- boolean
+	tModifier.Permanent    = mod.Permanent; -- boolean
+	tModifier.OwnerReqSetId = mod.OwnerRequirementSetId;
+	tModifier.SubjectReqSetId = mod.SubjectRequirementSetId;
+	
 	-- DynamicModifiers
-	sModifierType = tModifier.ModifierType;
-	for mod in GameInfo.DynamicModifiers() do
-		if mod.ModifierType == sModifierType then
-			tModifier.CollectionType = mod.CollectionType;
-			tModifier.EffectType     = mod.EffectType;
-			break;
-		end
+	local tResults: table = DB.Query("SELECT * FROM DynamicModifiers WHERE ModifierType = ?", tModifier.ModifierType);
+	if tResults and tResults[1] then
+		tModifier.CollectionType = tResults[1].CollectionType;
+		tModifier.EffectType     = tResults[1].EffectType;
 	end
 	if tModifier.CollectionType == nil or tModifier.EffectType == nil then print("WARNING! FetchAndCacheData: No dynamic modifier definition for Modifier", sModifierId); return nil; end
+	
 	-- ModifierStrings - this one must be searched entirely
-	-- WARNING! There are 4 modifiers with 2 strings, but 99% of them has only 1 - we'll get only 1 here!
-	for row in GameInfo.ModifierStrings() do
-		if row.ModifierId == sModifierId then tModifier.Text = row.Text; break; end
+	tResults = DB.Query("SELECT * FROM ModifierStrings WHERE ModifierId = ?", sModifierId);
+	if tResults then 
+		-- There are 4 modifiers with 2 strings, but 99% of them has only 1
+		if tResults[1] then
+			local txt: string = Locale.Lookup(tResults[1].Text);
+			if #txt == 0 then txt = tResults[1].Text; end
+			tModifier.Text = tResults[1].Context..": "..txt;
+		end
+		if tResults[2] then
+			local txt: string = Locale.Lookup(tResults[2].Text);
+			if #txt == 0 then txt = tResults[2].Text; end
+			tModifier.Text = tModifier.Text.."; "..tResults[2].Context..": "..txt;
+		end
 	end
+	
 	-- ModifierArguments - this one must be searched entirely
 	tModifier.Arguments = {};
-	for arg in GameInfo.ModifierArguments() do
-		if arg.ModifierId == sModifierId then
+	tResults = DB.Query("SELECT * FROM ModifierArguments WHERE ModifierId = ?", sModifierId);
+	if tResults and #tResults then 
+		for _,arg in ipairs(tResults) do
 			-- now we need to convert values into a proper type
 			-- there are 216 names, so maybe we'll do it when actually trying to use it?
 			--dprint("..found arg", arg.Name, arg.Value);
@@ -1484,8 +1452,8 @@ function FetchAndCacheData(sModifierId:string)
 				-- add here: access game speed, multiply by it
 				tModifier.ScaleByGameSpeed = true;
 			end
-		end
-	end
+		end -- for
+	end -- if
 	-- requirements
 	if tModifier.OwnerReqSetId   then tModifier.OwnerReqSet   = FetchAndCacheDataReqSet(tModifier.OwnerReqSetId);   end
 	if tModifier.SubjectReqSetId then tModifier.SubjectReqSet = FetchAndCacheDataReqSet(tModifier.SubjectReqSetId); end
@@ -1507,18 +1475,18 @@ function DecodeModifier(sModifierId:string, ePlayerID:number, iCityID:number, tM
 	local tMod:table = FetchAndCacheData(sModifierId);
 	if not tMod then return "ERROR: "..sModifierId.." not defined!"; end
 	local tOut = {};
-	table.insert(tOut, "Modifier: "..Capitalize(tMod.ModifierId));
-	table.insert(tOut, "Type: "..Capitalize(tMod.ModifierType));
+	table.insert(tOut, "Modifier: "..tMod.ModifierId);
+	table.insert(tOut, "Type: "..string.sub(tMod.ModifierType, 10)); -- 230514 #2
 	if tMod.OwnerReqSetId then
-		table.insert(tOut, "Owner: "..Capitalize(tMod.OwnerReqSetId));
+		table.insert(tOut, "Owner: "..tMod.OwnerReqSetId);
 		DecodeReqSet(tOut, tMod.OwnerReqSetId);
 	end
-	table.insert(tOut, "Collection: "..Capitalize(tMod.CollectionType));
+	table.insert(tOut, "Collection: "..string.sub(tMod.CollectionType, 12)); -- 230514 #2
 	if tMod.SubjectReqSetId then
-		table.insert(tOut, "Subject: "..Capitalize(tMod.SubjectReqSetId));
+		table.insert(tOut, "Subject: "..tMod.SubjectReqSetId);
 		DecodeReqSet(tOut, tMod.SubjectReqSetId);
 	end
-	table.insert(tOut, "Effect: "..Capitalize(tMod.EffectType));
+	table.insert(tOut, "Effect: "..string.sub(tMod.EffectType, 8)); -- 230514 #2
 	for name,value in pairs(tMod.Arguments) do table.insert(tOut, name.." = "..value); end
 	if tMod.ScaleByGameSpeed then table.insert(tOut, "Scaled by Game Speed"); end
 	if tMod.RunOnce then table.insert(tOut, "Run Once"); end
@@ -1594,10 +1562,10 @@ function DecodeModifier(sModifierId:string, ePlayerID:number, iCityID:number, tM
 		sSubjectType;
 end
 
+
 -- ===========================================================================
 -- MODIFIERS' DYNAMIC ANALYSIS
 -- ===========================================================================
-
 
 ------------------------------------------------------------------------------
 -- Requires 3 arguments
@@ -2791,33 +2759,26 @@ function Initialize()
 	end
 	
 	-- PERFORMANCE TESTING
-	-- Reading all requirements - huge improvement, 90 ms -> 20 ms
+	--[[
+	-- Reading all requirements - 90 ms -> 20 ms
 	Timer1Reset(); Timer1Start();
 	for req in GameInfo.Requirements() do
 		_ = FetchAndCacheDataReq(req.RequirementId);
 	end
-	Timer1Tick(); Timer1Stop("reading all requirements");
-	-- Decoding all requirements - pretty insignificant, 3 ms -> 2 ms
-	-- Reading all requirement sets - huge improvement, 140 ms -> 15 ms
+	Timer1Tick(); Timer1Stop("requirements");
+	-- Decoding all requirements - insignificant, 3 ms -> 2 ms
+	-- Reading all requirement sets - 140 ms -> 15 ms
 	Timer1Reset(); Timer1Start();
 	for req in GameInfo.RequirementSets() do
 		_ = FetchAndCacheDataReqSet(req.RequirementSetId);
 	end
-	Timer1Tick(); Timer1Stop("reading all requirement sets");
-	
-	--[[
-	local tOut: table = {};
-	Timer1Reset();
-	Timer1Start();
-	--Timer2Reset();
-	for req in GameInfo.Requirements() do
-		tOut = {};
-		DecodeReq(tOut, req.RequirementId);
-		--print(table.concat(tOut));
+	Timer1Tick(); Timer1Stop("requirement sets");
+	-- Reading all modifiers -  2200 ms -> 270 ms
+	Timer1Reset(); Timer1Start();
+	for mod in GameInfo.Modifiers() do
+		_ = FetchAndCacheData(mod.ModifierId);
 	end
-	Timer1Tick();
-	Timer1Stop("decoding all requirements");
-	--Timer2Stop("args");
+	Timer1Tick(); Timer1Stop("modifiers");
 	--]]
 end
 Initialize();
