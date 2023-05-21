@@ -534,6 +534,7 @@ end
 --						.Buildings - table of Buildings in the District
 --				.Wonders - wonders
 --				.OutgoingRoutes - trade routes
+--				.IncomingRoutes - trade routes
 -- ===========================================================================
 function GetCityData( pCity:table )
 
@@ -2393,6 +2394,28 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 			if route.IsDomestic then iNum = iNum + route.NumImprovedResourcesStrategic; end
 		end
 		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount));
+		
+	-- 230521 #15 University of Sankore, Surplus Logistics, Zheng He effects
+	-- This effect is bugged in the engine - it ignores Domestic argument and works only for International TRs.
+	elseif tMod.EffectType == "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FROM_OTHERS" then
+		if CheckForMismatchError(SubjectTypes.City) then return nil; end
+		local iNum:number = 0;
+		for _,route in ipairs(tSubject.IncomingRoutes) do
+			if not route.IsDomestic then iNum = iNum + 1; end
+		end
+		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount));
+		
+	-- 230521 #15 University of Sankore, Surplus Logistics, Zheng He effects
+	-- This effect handles both domestic and international TRs, but we gain only from domestic ones.
+	elseif tMod.EffectType == "EFFECT_ADJUST_TRADE_ROUTE_YIELD_TO_OTHERS" then
+		if CheckForMismatchError(SubjectTypes.City) then return nil; end
+		if tMod.Arguments.Domestic and tonumber(tMod.Arguments.Domestic) == 1 then
+			local iNum:number = 0;
+			for _,route in ipairs(tSubject.IncomingRoutes) do
+				if route.IsDomestic then iNum = iNum + 1; end
+			end
+			YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount));
+		end
 
 	------------------------------ GREAT WORK and TOURISM ------------------------------------------------
 	
