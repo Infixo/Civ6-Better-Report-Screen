@@ -2393,24 +2393,12 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 	-- 230521 #1 Wisselbanken
 	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_DESTINATION_YIELD_FOR_ALLY_ROUTE" then
 		if CheckForMismatchError(SubjectTypes.Player) then return nil end
-		local iNum:number = 0
-		for cityname,city in pairs(tSubject.Cities) do
-			for _,route in ipairs(city.IncomingRoutes) do
-				if route.IsOriginPlayerAlly then iNum = iNum + 1 end
-			end
-		end
-		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
+		YieldTableClear(tImpact); -- no gains for us
 
 	-- 230521 #1 Wisselbanken
 	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_DESTINATION_YIELD_FOR_SUZERAIN_ROUTE" then
 		if CheckForMismatchError(SubjectTypes.Player) then return nil end
-		local iNum:number = 0
-		for cityname,city in pairs(tSubject.Cities) do
-			for _,route in ipairs(city.IncomingRoutes) do
-				if route.IsOriginSuzerained then iNum = iNum + 1 end
-			end
-		end
-		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
+		YieldTableClear(tImpact); -- no gains for us
 
 	elseif tMod.EffectType == "EFFECT_ADJUST_TRADE_ROUTE_YIELD_FOR_DOMESTIC" then
 		if CheckForMismatchError(SubjectTypes.Player) then return nil; end
