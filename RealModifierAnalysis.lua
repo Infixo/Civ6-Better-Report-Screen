@@ -1072,6 +1072,7 @@ function GetCityData( pCity:table )
 			Yields      = YieldTableNew(), -- later
 			NumImprovedResourcesAtDestination = 0, -- later
 			IsDestinationPlayerAlly = false, -- later
+			IsDestinationSuzerained = false, -- 230521 #1 Wisselbanken
 			NumSpecialtyDistricts = 0, -- later
 		}
 		-- copy yields
@@ -1100,8 +1101,13 @@ function GetCityData( pCity:table )
 		routeData.NumImprovedResourcesStrategic = CountImprovedResources("RESOURCECLASS_STRATEGIC")
 		routeData.NumImprovedResourcesLuxury    = CountImprovedResources("RESOURCECLASS_LUXURY")
 		routeData.NumImprovedResourcesBonus     = CountImprovedResources("RESOURCECLASS_BONUS")
-		-- if destination is Ally (diplo)
-		routeData.IsDestinationPlayerAlly = ( GameInfo.DiplomaticStates[ pPlayerDiplomaticAI:GetDiplomaticStateIndex(route.DestinationCityPlayer) ].StateType == "DIPLO_STATE_ALLIED" )
+		-- 230521 #1 If destination an is Ally (diplo)
+		routeData.IsDestinationPlayerAlly = ( pPlayerDiplomaticAI:GetDiplomaticStateIndex(route.DestinationCityPlayer) == GameInfo.DiplomaticStates.DIPLO_STATE_ALLIED.Index );
+		
+		-- 230521 #1 If destination is a CityState and we are its suzerain
+		if pDestPlayer:IsMinor() then
+			routeData.IsDestinationSuzerained = ( pDestPlayer:GetInfluence():GetSuzerain() == route.OriginCityPlayer );
+		end
 		
 		-- GreatPerson number of specialty districts at destination
 		for _,district in pDestCity:GetDistricts():Members() do
@@ -1123,6 +1129,8 @@ function GetCityData( pCity:table )
 			Name        = "", -- later
 			IsDomestic  = (route.OriginCityPlayer == route.DestinationCityPlayer), -- boolean
 			Yields      = YieldTableNew(), -- later
+			IsOriginPlayerAlly = false, -- 230521 #1 Wisselbanken
+			IsOriginSuzerained = false, -- 230521 #1 Wisselbanken
 		}
 		-- copy yields
 		for _,yield in ipairs(route.DestinationYields) do
@@ -1133,6 +1141,14 @@ function GetCityData( pCity:table )
 		local pOriginPlayer:table = Players[ route.OriginCityPlayer ]
 		local pOriginCity:table = pOriginPlayer:GetCities():FindID(route.OriginCityID)
 		routeData.Name = Locale.Lookup(pOriginCity:GetName()).." - "..data.Name -- opposite to outgoing
+		
+		-- 230521 #1 If origin is an Ally (diplo)
+		routeData.IsOriginPlayerAlly = ( pOriginPlayer:GetDiplomaticAI():GetDiplomaticStateIndex(route.DestinationCityPlayer) == GameInfo.DiplomaticStates.DIPLO_STATE_ALLIED.Index );
+
+		-- 230521 #1 If origin is a CityState and we are its suzerain
+		if pOriginPlayer:IsMinor() then
+			routeData.IsOriginSuzerained = ( pOriginPlayer:GetInfluence():GetSuzerain() == route.DestinationCityPlayer );
+		end
 
 		table.insert(data.IncomingRoutes, routeData)
 	end
@@ -2335,6 +2351,39 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 		for cityname,city in pairs(tSubject.Cities) do
 			for _,route in ipairs(city.OutgoingRoutes) do
 				if route.IsDestinationPlayerAlly then iNum = iNum + 1 end
+			end
+		end
+		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
+
+	-- 230521 #1 Wisselbanken
+	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_ORIGIN_YIELD_FOR_SUZERAIN_ROUTE" then
+		if CheckForMismatchError(SubjectTypes.Player) then return nil end
+		local iNum:number = 0
+		for cityname,city in pairs(tSubject.Cities) do
+			for _,route in ipairs(city.OutgoingRoutes) do
+				if route.IsDestinationSuzerained then iNum = iNum + 1 end
+			end
+		end
+		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
+
+	-- 230521 #1 Wisselbanken
+	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_DESTINATION_YIELD_FOR_ALLY_ROUTE" then
+		if CheckForMismatchError(SubjectTypes.Player) then return nil end
+		local iNum:number = 0
+		for cityname,city in pairs(tSubject.Cities) do
+			for _,route in ipairs(city.IncomingRoutes) do
+				if route.IsOriginPlayerAlly then iNum = iNum + 1 end
+			end
+		end
+		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
+
+	-- 230521 #1 Wisselbanken
+	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_DESTINATION_YIELD_FOR_SUZERAIN_ROUTE" then
+		if CheckForMismatchError(SubjectTypes.Player) then return nil end
+		local iNum:number = 0
+		for cityname,city in pairs(tSubject.Cities) do
+			for _,route in ipairs(city.IncomingRoutes) do
+				if route.IsOriginSuzerained then iNum = iNum + 1 end
 			end
 		end
 		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, iNum * tonumber(tMod.Arguments.Amount))
