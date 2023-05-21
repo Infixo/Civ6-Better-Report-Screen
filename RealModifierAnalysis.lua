@@ -151,6 +151,18 @@ local SubjectTypes:table = {
 	Plot = "Plot", -- also plot yields
 }
 
+-- 230521 #13 Building_YieldDistrictCopies
+local tDistrictYieldCopies: table = {};
+function InitializeDistrictYieldCopies()
+	for row in GameInfo.Building_YieldDistrictCopies() do
+		if tDistrictYieldCopies[row.BuildingType] == nil then tDistrictYieldCopies[row.BuildingType] = {}; end
+		--table.insert(tDistrictYieldCopies[row.BuildingType], { Old = row.OldYieldType, New = row.NewYieldType}); -- too complex, assume 1=>1 copying
+		tDistrictYieldCopies[row.BuildingType][row.OldYieldType] = row.NewYieldType;
+	end
+end
+InitializeDistrictYieldCopies();
+
+
 -- ===========================================================================
 -- EXTENDED YIELDS
 -- extended yields to support other effects, like Amenities, Tourism, etc.
@@ -2110,7 +2122,19 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 	elseif tMod.EffectType == "EFFECT_ADJUST_DISTRICT_YIELD_MODIFIER" then
 		if CheckForMismatchError(SubjectTypes.District) then return nil; end
 		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, YieldTableGetYield(tSubject.Yields, tMod.Arguments.YieldType) * tonumber(tMod.Arguments.Amount) / 100.0);
-	
+		-- 230521 #13 Economic Union
+		for _,building in ipairs(tSubject.Buildings) do
+			if tDistrictYieldCopies[building.BuildingType] ~= nil and building.isBuilt and not building.isPillaged then
+				local oldYield: string = tMod.Arguments.YieldType;
+				local newYield: string = tDistrictYieldCopies[building.BuildingType][oldYield];
+				if newYield ~= nil then
+					local tImpactAdd: table = YieldTableNew();
+					YieldTableSetYield(tImpactAdd, newYield, YieldTableGetYield(tSubject.Yields, oldYield) * tonumber(tMod.Arguments.Amount) / 100.0);
+					YieldTableAdd(tImpact, tImpactAdd);
+				end
+			end
+		end
+
 	elseif tMod.EffectType == "EFFECT_ADJUST_DISTRICT_YIELD_CHANGE" then
 		if CheckForMismatchError("District") then return nil; end
         -- 2021-05-14 Public Transport fix
