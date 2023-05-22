@@ -35,7 +35,7 @@ bIsMonopolies = GameCapabilities.HasCapability("CAPABILITY_MONOPOLIES"); -- Mono
 print("Monopolies     :", (bIsMonopolies and "YES" or "no"));
 
 -- Configuration options
-local bOptionModifiers:boolean = ( GlobalParameters.BRS_OPTION_MODIFIERS == 1 );
+bOptionModifiers = ( GlobalParameters.BRS_OPTION_MODIFIERS == 1 );
 
 -- Global constants
 LL = Locale.Lookup;

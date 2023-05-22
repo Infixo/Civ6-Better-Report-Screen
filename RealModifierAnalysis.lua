@@ -583,6 +583,8 @@ function GetCityData( pCity:table )
 		Population				= pCity:GetPopulation(),
 		Wonders					= {},		-- Format per entry: { Name, YieldType, YieldChange }
 		Plot 					= Map.GetPlot(pCity:GetX(), pCity:GetY()),
+		NumResources            = 0, -- 230522 #10 Johannesburg
+		
 		--- not used yet
 		AmenitiesNetAmount				= 0,
 		AmenitiesNum					= 0,
@@ -669,7 +671,9 @@ function GetCityData( pCity:table )
 	data.IsGarrisonUnit = false;
 	local pPlotCity:table = Map.GetPlot( pCity:GetX(), pCity:GetY() );
 	for _,unit in ipairs(Units.GetUnitsInPlot(pPlotCity)) do
-		if GameInfo.Units[ unit:GetUnitType() ].FormationClass == "FORMATION_CLASS_LAND_COMBAT" then data.IsGarrisonUnit = true; break; end
+		-- 230522 #17 Any combat unit can be a garrison, TODO: check Encampment
+		--if GameInfo.Units[ unit:GetUnitType() ].FormationClass == "FORMATION_CLASS_LAND_COMBAT" then data.IsGarrisonUnit = true; break; end
+		if unit:GetCombat() > 0 then data.IsGarrisonUnit = true; break; end
 	end
 
 	-- If something is currently being produced, mark it in the queue.
@@ -861,7 +865,34 @@ function GetCityData( pCity:table )
 	else
 		UI.DataError("Some data will be missing as unable to obtain the corresponding district for city: "..pCity:GetName());
 	end
+	
+	-------------------------------------
+	-- 230522 CITY PLOTS
+	-- Loop through all the plots of the city, based on GetCityResourceData())
+	
+	local kResources: table = {};
+	local cityPlots : table = Map.GetCityPlots():GetPurchasedPlots(pCity)
+	for _, plotID in ipairs(cityPlots) do
+		local plot: table = Map.GetPlotByIndex(plotID);
+		local eResourceType: number = plot:GetResourceType();
+		local eImprovementType: number = plot:GetImprovementType();
 
+	    -- 230522 #10 Johannesburg Count improved different resource types
+		-- Note: It must be an actual improvement. Strategics under districts do not trigger Johannesburg effect!
+		if eResourceType ~= -1 and eImprovementType ~= -1 and not plot:IsImprovementPillaged() then
+			-- must also check if this a valid improvement
+			local tResults: table =
+				DB.Query("SELECT * FROM Improvement_ValidResources WHERE ImprovementType = ? AND ResourceType = ?",
+					GameInfo.Improvements[eImprovementType].ImprovementType,
+					GameInfo.Resources[eResourceType].ResourceType);
+			if tResults and #tResults > 0 then -- found a valid improved resource
+				kResources[eResourceType] = true;
+				dshowtable(kResources);
+			end
+		end
+	end
+	data.NumResources = table.count(kResources);	
+	
 	-------------------------------------
 	-- DISTRICTS
 	for i, district in pCityDistricts:Members() do
@@ -2116,6 +2147,12 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 			print("ERROR: ApplyEffectAndCalculateImpact mismatch for subject", sSubjectType); dshowtable(tMod); return nil;
 		end
 		tImpact.AMENITY = tonumber(tMod.Arguments.Amount);
+		
+	-- 230522 #10 Johannesburg
+	elseif tMod.EffectType == "EFFECT_ADJUST_YIELD_BY_NUMBER_OF_RESOURCES" then
+		if CheckForMismatchError(SubjectTypes.City) then return nil; end
+		print("NumResources", tSubject.NumResources);
+		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, tSubject.NumResources * tonumber(tMod.Arguments.Amount));
 		
 	------------------------------ DISTRICT ------------------------------------------------
 	
