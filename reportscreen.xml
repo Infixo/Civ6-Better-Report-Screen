@@ -1854,47 +1854,61 @@
 	</Instance>
 	-->
 
+	<!-- PAGE DEALS -->
+	
 	<Instance Name="DealsHeader">
-		<Container ID="Top" Offset="8,0" Size="1123,25">
-			<Image Offset="4,0" Size="parent-24,parent" Texture="Controls_GradientSmall" FlipY="1" Color="39,89,137,125"/>
+		<Container ID="Top" Offset="10,0" Size="1090,25">
+			<Image Size="parent,parent" Texture="Controls_GradientSmall" FlipY="1" Color="39,89,137,125"/>
 			<Stack StackGrowth="Right">
 				<Box Size="2,parent" Color="46,70,95,128" />
-
-				<Container Offset="1,0" Size="560,parent">
-					<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="255,255,255,255" String="LOC_BRS_CURRENT_DEALS_OUTGOING"/>
+				<Container Size="470,parent">
+					<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="200,200,200,255" String="LOC_BRS_CURRENT_DEALS_OUTGOING"/>
 				</Container>
-
-				<Box Offset="1,0" Size="2,parent" Color="46,70,95,128"/>
-
-				<Container Offset="1,0" Size="537,parent">
-						<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="255,255,255,255" String="LOC_BRS_CURRENT_DEALS_INCOMING"/>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<Container Size="470,parent">
+					<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="200,200,200,255" String="LOC_BRS_CURRENT_DEALS_INCOMING"/>
 				</Container>
-				
-				<Box Offset="1,0" Size="2,parent" Color="46,70,95,128"/>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<!-- 230522 #6 New columns -->
+				<Container Size="80,parent">
+					<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="200,200,200,255" String="LOC_PLAYER_CHANGE_POPUP_START_TURN"/>
+				</Container>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<Container Size="60,parent">
+					<Label Style="ReportHeaderSmallText" Anchor="C,C" Color="200,200,200,255" String="[ICON_Turn]" ToolTip="LOC_TURNS_REMAINING"/>
+				</Container>
+				<Box Size="2,parent" Color="46,70,95,128"/>
 			</Stack>
 		</Container>
 	</Instance>
 	
 	<Instance Name="DealsInstance">
-		<Container ID="Top" Offset="8,0" Size="1123,30">
+		<Container ID="Top" Offset="10,0" Size="1090,20">
+			<Image Size="parent,parent" Texture="Controls_GradientSmall" FlipY="1" Color="39,89,137,125"/>
 			<Stack StackGrowth="Right" >
 				<Box Size="2,parent" Color="46,70,95,128"/>
-				
-				<Container Offset="1,0" Size="560,parent">
-					<Label ID="Outgoing" Style="ReportValueText" Anchor="C,C" String=""/>
+				<Container Size="470,parent">
+					<Label ID="Outgoing" Style="ReportValueText" Anchor="C,C" String="$outgoing"/>
 				</Container>
-
-				<Box Offset="1,0" Size="2,parent" Color="46,70,95,128"/>
-
-				<Container Offset="1,0" Size="537,parent">
-						<Label ID="Incoming" Style="ReportValueText" Anchor="C,C" String=""/>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<Container Size="470,parent">
+					<Label ID="Incoming" Style="ReportValueText" Anchor="C,C" String="$incoming"/>
 				</Container>
-				
-				<Box Offset="1,0" Size="2,parent" Color="46,70,95,128"/>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<!-- 230522 #6 New columns -->
+				<Container Size="80,parent">
+					<Label ID="Enacted" Style="ReportValueText" Anchor="C,C" String="$99"/>
+				</Container>
+				<Box Size="2,parent" Color="46,70,95,128"/>
+				<Container Size="60,parent">
+					<Label ID="Turns" Style="ReportValueText" Anchor="C,C" String="$9"/>
+				</Container>
+				<Box Size="2,parent" Color="46,70,95,128"/>
 			</Stack>
 		</Container>
 	</Instance>
 
+	<!-- 230522 #6 Not used
 	<Instance Name="DealsFooterInstance">
 		<Container ID="Top" Offset="8,0" Size="1123,30">
 			<Image Offset="4,0" Size="parent-24,parent" Texture="Controls_GradientSmall" FlipY="0" Color="39,89,137,125"/>
@@ -1916,6 +1930,7 @@
 			<Grid Style="DividerGrid" Offset="-10,22" Size="parent+4,8" Color="47,63,76,255"/>
 		</Container>
 	</Instance>
+	-->
 
 	<!-- NEW TAB: POLICY INFORMATION
 		Displayes all policies and processed info about their impact; style similar to CityStatus
