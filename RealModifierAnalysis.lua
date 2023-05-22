@@ -2156,7 +2156,6 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 	-- 230522 #10 Johannesburg
 	elseif tMod.EffectType == "EFFECT_ADJUST_YIELD_BY_NUMBER_OF_RESOURCES" then
 		if CheckForMismatchError(SubjectTypes.City) then return nil; end
-		print("NumResources", tSubject.NumResources);
 		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, tSubject.NumResources * tonumber(tMod.Arguments.Amount));
 		
 	------------------------------ DISTRICT ------------------------------------------------

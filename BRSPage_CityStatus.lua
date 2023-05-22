@@ -469,6 +469,8 @@ function city_fields( kCityData, pCityInstance )
 	-- Districts
 	pCityInstance.Districts:SetText( GetDistrictsForCity(kCityData) );
 	
+	pCityInstance.Loyalty:SetShow(bIsRiseFall or bIsGatheringStorm);
+	pCityInstance.Governor:SetShow(bIsRiseFall or bIsGatheringStorm);
 	if not (bIsRiseFall or bIsGatheringStorm) then return end -- the 2 remaining fields are for Rise & Fall only
 	
 	-- Loyalty -- Infixo: this is not stored - try to store it for sorting later!
@@ -647,6 +649,9 @@ function ViewCityStatusPage()
 	
 	local pHeaderInstance:table = {};
 	ContextPtr:BuildInstanceForControl( "CityStatusHeaderInstance", pHeaderInstance, instance.Top );
+	
+	pHeaderInstance.CityGovernorButton:SetShow(bIsRiseFall or bIsGatheringStorm);
+	pHeaderInstance.CityLoyaltyButton:SetShow(bIsRiseFall or bIsGatheringStorm);
 	
 	pHeaderInstance.CityReligionButton:RegisterCallback( Mouse.eLClick, function() instance.Descend = not instance.Descend; sort_cities( "religion", instance ) end )
 	pHeaderInstance.CityNameButton:RegisterCallback( Mouse.eLClick, function() instance.Descend = not instance.Descend; sort_cities( "name", instance ) end )

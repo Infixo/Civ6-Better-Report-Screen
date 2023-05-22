@@ -71,36 +71,20 @@
 			<File>Text/BetterReportScreen_Text_zh_Hans_CN.xml</File>
 			<File>Text/BetterReportScreen_Text_zh_Hant_HK.xml</File>
 		</UpdateText>
-		<!-- Rise&Fall actions - replace lua and import xml (there's no 'replace' for xml) -->
-        <ImportFiles id="BRS_ImportFiles_XP1" criteria="Expansion1">
-			<Properties>
-                <LoadOrder>1010</LoadOrder>
-            </Properties>		
-            <Items>
-				<File>RiseFall/reportscreen.xml</File>
-            </Items>
-        </ImportFiles>
+		<!-- Rise&Fall actions -->
 		<ReplaceUIScript id="BRS_ReplaceUI_ReportScreen_XP1" criteria="Expansion1">
 			<Properties>
                 <LoadOrder>1010</LoadOrder>
-				<LuaContext>reportscreen</LuaContext>
+				<LuaContext>ReportScreen</LuaContext>
 				<LuaReplace>reportscreen.lua</LuaReplace>
 			</Properties>
 		</ReplaceUIScript>
-		<!-- Gathering Storm actions - replace lua and import xml (there's no 'replace' for xml) -->
-        <ImportFiles id="BRS_ImportFiles_XP2" criteria="Expansion2">
-			<Properties>
-                <LoadOrder>1020</LoadOrder>
-            </Properties>		
-            <Items>
-				<File>RiseFall/reportscreen.xml</File> <!-- no layout changes in GS -->
-            </Items>
-        </ImportFiles>
+		<!-- Gathering Storm actions -->
 		<ReplaceUIScript id="BRS_ReplaceUI_ReportScreen_XP2" criteria="Expansion2">
 			<Properties>
                 <LoadOrder>1020</LoadOrder>
 				<LuaContext>ReportScreen</LuaContext>
-				<LuaReplace>reportscreen.lua</LuaReplace> <!-- we'll try to use the same file -->
+				<LuaReplace>reportscreen.lua</LuaReplace>
 			</Properties>
 		</ReplaceUIScript>
 		<!-- new font icons -->
@@ -133,6 +117,7 @@
 		<!-- Shared files -->
 		<File>BetterReportScreen_Database.sql</File>
         <File>reportscreen.lua</File>
+		<File>reportscreen.xml</File>
 		<File>BRSPage_Yields.lua</File>
 		<File>BRSPage_Resources.lua</File>
 		<File>BRSPage_CityStatus.lua</File>
@@ -156,10 +141,6 @@
 		<File>Text/BetterReportScreen_Text_ru_RU.xml</File>
 		<File>Text/BetterReportScreen_Text_zh_Hans_CN.xml</File>
 		<File>Text/BetterReportScreen_Text_zh_Hant_HK.xml</File>
-		<!-- Vanilla files -->
-		<File>reportscreen.xml</File>
-		<!-- Rise & Fall files -->
-		<File>RiseFall/reportscreen.xml</File>
 		<!-- new font icons -->
 		<File>Icons/FontIconsRMI.dds</File>
 		<File>Icons/FontIconsRMI.xml</File>

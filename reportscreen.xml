@@ -856,7 +856,6 @@
 					</GridButton>
 				</Container>
 				<Box																													Size="2,parent"	Color="46,70,95,128" />
-				<!-- VANILLA
 				<Container																										Size="30,parent">
 					<GridButton		ID="CityGovernorButton"  Size="parent,parent" Style="ButtonLightWeightSquareGrid" Anchor="C,C" ToolTip="LOC_REPORTS_GOVERNOR">
 						<Label													Style="ReportHeaderSmallText"		String="[ICON_Governor]" />
@@ -869,7 +868,6 @@
 					</GridButton>
 				</Container>
 				<Box																													Size="2,parent"	Color="46,70,95,128" />
-				-->
 				<Container																										Size="80,parent">
 					<GridButton		ID="CityPopulationButton"  Size="parent,parent" Style="ButtonLightWeightSquareGrid" Anchor="C,C">
 						<Label													Style="ReportHeaderSmallText"		String="LOC_HUD_REPORTS_HEADER_POPULATION" />
@@ -963,7 +961,6 @@
 					</GridButton>
 				</Container>
 				<Box																													Size="2,parent"	Color="46,70,95,128" />
-				<!-- VANILLA
 				<Container																										Size="30,parent">
 					<Label				ID="Governor"	Offset="0,3"																Style="ReportValueText"	String="$Housing$" />
 				</Container>
@@ -972,7 +969,6 @@
 					<Label				ID="Loyalty"													Offset="-2,0"	Style="ReportValueText"	String="$Status$" />
 				</Container>
 				<Box																													Size="2,parent"	Color="46,70,95,128" />
-				-->
 				<Container																										Size="80,parent">
 					<Label				ID="Population"																Style="ReportValueText"	String="$Population$" />
 				</Container>
