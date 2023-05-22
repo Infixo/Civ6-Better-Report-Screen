@@ -423,6 +423,12 @@ DATA_DOMINANT_RELIGION = "_DOMINANTRELIGION";
 	--IGNORED = 2
 --}
 
+-- 230522 #17 Districts with HitPoints can be garrisoned
+local tGarrisonDistricts: table = {};
+for row in GameInfo.Districts() do
+	if row.HitPoints > 0 then tGarrisonDistricts[row.DistrictType] = true; end
+end
+
 
 -- ===========================================================================
 --	Obtains the texture for a city's current production.
@@ -584,6 +590,7 @@ function GetCityData( pCity:table )
 		Wonders					= {},		-- Format per entry: { Name, YieldType, YieldChange }
 		Plot 					= Map.GetPlot(pCity:GetX(), pCity:GetY()),
 		NumResources            = 0, -- 230522 #10 Johannesburg
+		IsGarrisonUnit          = false, -- 230522 #17 Garrison in a city
 		
 		--- not used yet
 		AmenitiesNetAmount				= 0,
@@ -666,16 +673,7 @@ function GetCityData( pCity:table )
 	data.IsGovernorEstablished, data.NumGovernorPromotions = GetGovernorData(pCity)
 	data.ContinentType = Map.GetPlot( pCity:GetX(), pCity:GetY() ):GetContinentType()
 	data.GreatWorks = GetGreatWorksForCity(pCity)
-
-	-- Garrison in a city
-	data.IsGarrisonUnit = false;
-	local pPlotCity:table = Map.GetPlot( pCity:GetX(), pCity:GetY() );
-	for _,unit in ipairs(Units.GetUnitsInPlot(pPlotCity)) do
-		-- 230522 #17 Any combat unit can be a garrison, TODO: check Encampment
-		--if GameInfo.Units[ unit:GetUnitType() ].FormationClass == "FORMATION_CLASS_LAND_COMBAT" then data.IsGarrisonUnit = true; break; end
-		if unit:GetCombat() > 0 then data.IsGarrisonUnit = true; break; end
-	end
-
+	
 	-- If something is currently being produced, mark it in the queue.
 	if productionInfo ~= nil then
 		currentProduction				= productionInfo.Name;
@@ -987,6 +985,13 @@ function GetCityData( pCity:table )
 		-- kPlot holds the plot, district:GetType(), also produces 0 for index=6, so it's ok
 		for yield,yid in pairs(YieldTypes) do
 			districtTable.Yields[ yield ] = kPlot:GetAdjacencyYield(ownerID, pCity:GetID(), district:GetType(), yid)
+		end
+		
+		-- 230522 #17 Garrison unit can be also in an Encampment, so we will handle all possible districts in one go
+		if not data.IsGarrisonUnit and tGarrisonDistricts[districtInfo.DistrictType] then -- don't iterate if we already found a garrison
+			for _,unit in ipairs(Units.GetUnitsInPlot(plotID)) do
+				if unit:GetCombat() > 0 then data.IsGarrisonUnit = true; break; end
+			end
 		end
 
 		---------------------------------------------------------------------

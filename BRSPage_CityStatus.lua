@@ -6,6 +6,13 @@
 
 m_kCity1Data = nil; -- global for debug purposes
 
+-- 230522 #17 Districts with HitPoints can be garrisoned
+local tGarrisonDistricts: table = {};
+for row in GameInfo.Districts() do
+	if row.HitPoints > 0 then tGarrisonDistricts[row.DistrictType] = true; end
+end
+
+
 -- ===========================================================================
 -- REAL HOUSING FROM IMPROVEMENTS
 -- Get the real housing from improvements, not rounded-down
@@ -147,15 +154,7 @@ function GetDataCityStatus()
 		--print("Majority religion followers for", cityName, data.MajorityReligionFollowers);
 		
 		-- Garrison in a city
-		data.IsGarrisonUnit = false;
-		local pPlotCity:table = Map.GetPlot( pCity:GetX(), pCity:GetY() );
-		for _,unit in ipairs(Units.GetUnitsInPlot(pPlotCity)) do
-			if GameInfo.Units[ unit:GetUnitType() ].FormationClass == "FORMATION_CLASS_LAND_COMBAT" then -- 230511 TODO: is naval unit also a garrisoned unit?
-				data.IsGarrisonUnit = true;
-				data.GarrisonUnitName = Locale.Lookup( unit:GetName() );
-				break;
-			end
-		end
+		data.IsGarrisonUnit = false; -- 230522 #10 See below in the loop
 		
 		-- count all districts and specialty ones
 		data.NumDistricts = 0;
@@ -168,7 +167,17 @@ function GetDataCityStatus()
 			if district:IsComplete() and not districtInfo.CityCenter and districtInfo.OnePerCity and districtInfo.DistrictType ~= "DISTRICT_WONDER" then
 				data.NumSpecialtyDistricts = data.NumSpecialtyDistricts + 1;
 			end
-		end
+			-- 230522 #17 Garrison unit can be also in an Encampment, so we will handle all possible districts in one go
+			if not data.IsGarrisonUnit and tGarrisonDistricts[districtInfo.DistrictType] then -- don't iterate if we already found a garrison
+				for _,unit in ipairs(Units.GetUnitsInPlot( district:GetX(), district:GetY() )) do
+					if unit:GetCombat() > 0 then
+						data.IsGarrisonUnit = true;
+						data.GarrisonUnitName = LL(unit:GetName());
+						break;
+					end
+				end
+			end
+		end -- for districts
 		
 	end -- for Cities:Members
 end
