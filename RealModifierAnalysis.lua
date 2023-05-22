@@ -77,7 +77,7 @@ function dshowsubject(pSubject:table)
 	print("    sub: ", pSubject.SubjectType, pSubject.Name);
 end
 
-	--dprint("Subjects are:"); for k,v in pairs(tSubjects) do print(k,v.SubjectType,v.Name); end -- debug
+--dprint("Subjects are:"); for k,v in pairs(tSubjects) do print(k,v.SubjectType,v.Name); end -- debug
 -- debug routne - prints all subjects in 1 line
 function dshowsubjects(pSubjects:table)
 	local tOut:table = {};
@@ -180,17 +180,17 @@ YieldTypes.LOYALTY = 9
 -- whereever possible keep yields in a table named Yields with entries { YieldType = YieldValue }
 
 -- create maps (speed up)
-local YieldTypesMap = {};
+local YieldTypesMap: table = {};
 for yield in GameInfo.Yields() do
 	YieldTypesMap[ yield.YieldType ] = string.gsub(yield.YieldType, "YIELD_","");
 end
-local YieldTypesOrder = {};
+local YieldTypesOrder: table = {};
 for yield,yid in pairs(YieldTypes) do
 	YieldTypesOrder[yid] = yield;
 end 
---dshowtable(YieldTypes);
---dshowtable(YieldTypesMap);
---dshowtable(YieldTypesOrder);
+--print("YieldTypes"); dshowtable(YieldTypes);
+--print("YieldTypesMap"); dshowtable(YieldTypesMap);
+--print("YieldTypesOrder"); --dshowtable(YieldTypesOrder);
 --for yid,yield in ipairs(YieldTypesOrder) do dprint("YieldTypesOrder", yid, yield) end
 
 -- get a new table with all 0
@@ -213,6 +213,11 @@ end
 -- multiply by a given number
 function YieldTableMultiply(pYields:table, fModifier:number)
 	for yield,_ in pairs(YieldTypes) do pYields[ yield ] = pYields[ yield ] * fModifier; end
+end
+
+-- 230522 #3 multiply by a table of numbers
+function YieldTableMultiplyTable(pYields:table, pModifier:table)
+	for yield,_ in pairs(YieldTypes) do pYields[ yield ] = pYields[ yield ] * pModifier[ yield ]; end
 end
 
 -- multiply by a percentage given as integer 0..100
@@ -243,6 +248,7 @@ end
 
 -- 2019-06-20 GS introduced multiple yields in one modifier, separated with comma
 function YieldTableSetMultipleYields(pYields:table, sYields:string, sValues:string)
+	sYields = string.gsub(sYields, " ", ""); -- 230522 #3 Some of them have spaces inside, values are converted to number so it's not a problem
 	sYields = sYields..",";	sValues = sValues..",";
 	while string.len(sYields) > 0 and string.len(sValues) > 0 do
 		local iCommaYields:number = string.find(sYields, ",");
@@ -885,7 +891,6 @@ function GetCityData( pCity:table )
 					GameInfo.Resources[eResourceType].ResourceType);
 			if tResults and #tResults > 0 then -- found a valid improved resource
 				kResources[eResourceType] = true;
-				dshowtable(kResources);
 			end
 		end
 	end
@@ -1536,7 +1541,7 @@ end
 --  table - the modifier
 --  string - type of subjects
 function DecodeModifier(sModifierId:string, ePlayerID:number, iCityID:number, tMainSubjects:table, sMainSubjectType:string)
-	--dprint("FUN DecodeModifier(modid,pid,cid,subtype)",sModifierId,ePlayerID,iCityID,sMainSubjectType);
+	--print("DecodeModifier(modid,pid,cid,subtype)",sModifierId,ePlayerID,iCityID,sMainSubjectType);
 	local tMod:table = FetchAndCacheData(sModifierId);
 	if not tMod then return "ERROR: "..sModifierId.." not defined!"; end
 	local tOut = {};
@@ -1581,7 +1586,7 @@ function DecodeModifier(sModifierId:string, ePlayerID:number, iCityID:number, tM
 			tSubjects, sSubjectType = BuildCollectionOfSubjects(tMod, tOwner, sOwnerType);
 		end
 	end
-	--dprint("Subjects are:"); for k,v in pairs(tSubjects) do print(k,v.SubjectType,v.Name); end -- debug
+	--print("Subjects are:"); for k,v in pairs(tSubjects) do print(k,v.SubjectType,v.Name); end -- debug
 	--dshowsubjects(tSubjects); -- debug
 	-- list subjects
 	local tSubjectsOut:table = {};
@@ -1638,7 +1643,7 @@ end
 --  table - subject to analyze (from tCities or any other)
 --  string - type of subject (e.g. "City", "District")
 function CheckOneRequirement(tReq:table, tSubject:table, sSubjectType:string)
-	--dprint("FUNCAL CheckOneRequirement(req,type,sub)(subject)",tReq.ReqId,tReq.ReqType,sSubjectType,tSubject.SubjectType,tSubject.Name);
+	--print("CheckOneRequirement(req,type,sub)(subject)",tReq.ReqId,tReq.ReqType,sSubjectType,tSubject.SubjectType,tSubject.Name);
 	
 	local function CheckForMismatchError(sExpectedType:string, sExpectedType2:string)
 		if sExpectedType == tSubject.SubjectType or (sExpectedType2 ~= nil and sExpectedType2 == tSubject.SubjectType) then return false; end
@@ -1923,6 +1928,11 @@ function CheckOneRequirement(tReq:table, tSubject:table, sSubjectType:string)
         else
             print("ERROR: CheckOneRequirement mismatch for exp subject", "[City or Plot]", "got", tSubject.SubjectType, "req is", tReq.ReqId, tReq.ReqType); return true;
         end
+
+	-- 230522 #3 Halicarnassus
+	elseif tReq.ReqType == "REQUIREMENT_PLOT_IS_LAKE" then
+		if CheckForMismatchError(SubjectTypes.Plot) then return false; end
+		bIsValidSubject = tSubject.Plot:IsLake();
     
 	else
 		-- do nothing here... probably will never implement all possible types
@@ -1940,7 +1950,7 @@ end
 --  table - subject to analyze (from tCities or any other)
 --  string - type of subject (e.g. "City", "District")
 function CheckAllRequirements(tReqSet:table, tSubject:table, sSubjectType:string)
-	--dprint("FUNCAL CheckAllRequirements(req,sub)(subject)",tReqSet.ReqSetId,sSubjectType,tSubject.SubjectType,tSubject.Name);
+	--print("CheckAllRequirements(req,sub)(subject)",tReqSet.ReqSetId,sSubjectType,tSubject.SubjectType,tSubject.Name);
 	for _,req in ipairs(tReqSet.Reqs) do
 		local bIsValid:boolean = CheckOneRequirement(req, tSubject, sSubjectType);
 		if tReqSet.TestAny and     bIsValid then return true;  end -- we found 1 positive, that is all needed for TestAny
@@ -1961,7 +1971,7 @@ end
 --  table - of subjects - these are objects from tCities (cities, districts or buildings), TODO: filtered using SubReqs
 --  string - type of the subject
 function BuildCollectionOfSubjects(tMod:table, tOwner:table, sOwnerType:string)
-	--dprint("FUN BuildCollectionOfSubjects(subreq,ownname,owntype,passed)",tMod.SubjectReqSetId,tOwner.Name,tOwner.SubjectType,sOwnerType);
+	--print("BuildCollectionOfSubjects(subreq,ownname,owntype,passed)",tMod.SubjectReqSetId,tOwner.Name,tOwner.SubjectType,sOwnerType);
 	local tSubjects:table, sSubjectType:string = {}, "([COLOR_Red]unknown[ENDCOLOR])";
 	local tReqSet:table = tMod.SubjectReqSet; -- speed up some checking
 	--dprint("  Subject requirement set is (id)", tMod.SubjectReqSetId);
@@ -2093,7 +2103,7 @@ end
 -- Returns a table of extended yields
 -- It will return nil if an effect is unknown
 function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:string)
-	--dprint("FUN ApplyEffectAndCalculateImpact(mod,eff,sub)(subject)",tMod.ModifierId,tMod.EffectType,sSubjectType,tSubject.SubjectType,tSubject.Name);
+	--print("ApplyEffectAndCalculateImpact(mod,eff,sub)(subject)",tMod.ModifierId,tMod.EffectType,sSubjectType,tSubject.SubjectType,tSubject.Name);
 
 	local function CheckForMismatchError(sExpectedType:string)
 		if sExpectedType == tSubject.SubjectType then return false; end
@@ -2124,7 +2134,14 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 		
 	elseif tMod.EffectType == "EFFECT_ADJUST_CITY_YIELD_MODIFIER" then
 		if CheckForMismatchError(SubjectTypes.City) then return nil; end
-		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, YieldTableGetYield(tSubject.Yields, tMod.Arguments.YieldType) * tonumber(tMod.Arguments.Amount) / 100.0);
+		-- 230522 #3 support for multi-args
+		if string.find(tMod.Arguments.YieldType, ",") == nil then
+			YieldTableSetYield(tImpact, tMod.Arguments.YieldType, YieldTableGetYield(tSubject.Yields, tMod.Arguments.YieldType) * tonumber(tMod.Arguments.Amount) / 100.0);
+		else
+			YieldTableSetMultipleYields(tImpact, tMod.Arguments.YieldType, tMod.Arguments.Amount);
+			YieldTableMultiply(tImpact, 0.01);
+			YieldTableMultiplyTable(tImpact, tSubject.Yields);
+		end
 
 	elseif tMod.EffectType == "EFFECT_ADJUST_CITY_YIELD_PER_DISTRICT" then
 		if CheckForMismatchError(SubjectTypes.City) then return nil; end
@@ -2383,7 +2400,7 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 		--dshowyields(tSubject.Yields);
 		YieldTableSetYield(tImpact, tMod.Arguments.YieldType, YieldTableGetYield(tSubject.Yields, tMod.Arguments.YieldType) * tSubject.NumSuzerainCityStates * tonumber(tMod.Arguments.Amount) / 100.0);
 
-	------------------------------ TRADE ROUTE ------------------------------------------------
+	------------------------------ TRADE ROUTE MODIFIERS ------------------------------------------------
 	
 	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_TRADE_ROUTE_YIELD_MODIFIER" then
 		if CheckForMismatchError(SubjectTypes.Player) then return nil; end
@@ -2403,6 +2420,24 @@ function ApplyEffectAndCalculateImpact(tMod:table, tSubject:table, sSubjectType:
 				YieldTableAdd(tImpact, tSingleRouteImpact);
 			end
 		end
+	
+	-- 230522 #3 Tokugawa and Portugal
+	-- I've checked during a game that incoming routes are not affected
+	elseif tMod.EffectType == "EFFECT_ADJUST_PLAYER_INTERNATIONAL_TRADE_ROUTE_YIELD_MODIFIER" then
+		if CheckForMismatchError(SubjectTypes.Player) then return nil; end
+		-- sum yields from all outgoing international routes
+		for _,city in pairs(tSubject.Cities) do
+			for _,route in ipairs(city.OutgoingRoutes) do
+				if not route.IsDomestic then YieldTableAdd(tImpact, route.Yields); end
+			end
+		end
+		-- multiply total yields by the multi-modifier
+		local tModifier: table = YieldTableNew();
+		YieldTableSetMultipleYields(tModifier, tMod.Arguments.YieldType, tMod.Arguments.Amount);
+		YieldTableMultiply(tModifier, 0.01);
+		YieldTableMultiplyTable(tImpact, tModifier);
+	
+	------------------------------ TRADE ROUTE YIELDS ------------------------------------------------
 
 	elseif tMod.EffectType == "EFFECT_ADJUST_TRADE_ROUTE_YIELD" then
 		if CheckForMismatchError(SubjectTypes.Player) then return nil end
