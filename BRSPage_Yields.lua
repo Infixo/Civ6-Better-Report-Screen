@@ -921,7 +921,7 @@ function ViewYieldsPage()
 			end
 		end
 
-		-- Display route yields
+		-- Display yields from outgoing routes
 		if kCityData.OutgoingRoutes then
 			for i,route in ipairs(kCityData.OutgoingRoutes) do
 				if route ~= nil then
@@ -933,6 +933,28 @@ function ViewYieldsPage()
 						--Assign yields to the line item
 						local pLineItemInstance:table = CreatLineItemInstance(pCityInstance, Locale.Lookup("LOC_HUD_REPORTS_TRADE_WITH", Locale.Lookup(pDestCity:GetName())), 0, 0, 0, 0, 0, 0);
 						for j,yield in ipairs(route.OriginYields) do
+							local yieldInfo = GameInfo.Yields[yield.YieldIndex];
+							if yieldInfo then
+								SetFieldInLineItemInstance(pLineItemInstance, yieldInfo.YieldType, yield.Amount);
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		-- 230522 #14 Display yields from incoming routes
+		if kCityData.IncomingRoutes then
+			for _,route in ipairs(kCityData.IncomingRoutes) do
+				if route ~= nil then
+					if route.DestinationYields then
+						-- Find origin city
+						local pOrgPlayer:table = Players[route.OriginCityPlayer];
+						local pOrgPlayerCities:table = pOrgPlayer:GetCities();
+						local pOrgCity:table = pOrgPlayerCities:FindID(route.OriginCityID);
+						--Assign yields to the line item
+						local pLineItemInstance:table = CreatLineItemInstance(pCityInstance, LL("LOC_HUD_REPORTS_TRADE_WITH", LL(pOrgCity:GetName())), 0, 0, 0, 0, 0, 0);
+						for _,yield in ipairs(route.DestinationYields) do
 							local yieldInfo = GameInfo.Yields[yield.YieldIndex];
 							if yieldInfo then
 								SetFieldInLineItemInstance(pLineItemInstance, yieldInfo.YieldType, yield.Amount);
